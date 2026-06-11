@@ -114,33 +114,40 @@
   .sheet h2{font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:600;color:#efe9dc;
     font-size:1.3rem;letter-spacing:-.01em;margin-bottom:4px;}
   .sheet .lead{color:var(--mist-dim);font-size:.85rem;margin-bottom:22px;}
-  .group{margin-bottom:26px;}
+  .group{margin-bottom:20px;}
   .group > .glabel{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
-    color:var(--mist-dim);margin-bottom:12px;}
+    color:var(--mist-dim);margin-bottom:10px;}
+
+  /* combined stage rows: name | length | strikes */
+  .combo-head{display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-bottom:4px;}
+  .combo-head span{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--mist-dim);text-align:center;}
+  .combo-head span:first-child{text-align:left;}
+  .stage-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
+    padding:11px 0;border-bottom:1px solid var(--line);}
+  .stage-row:last-child{border-bottom:none;}
+  .sname{font-size:.98rem;color:#e7e2f0;min-width:0;white-space:nowrap;}
 
   .row{display:flex;align-items:center;justify-content:space-between;gap:10px;
     padding:14px 0;border-bottom:1px solid var(--line);}
   .row:last-child{border-bottom:none;}
   .row .name{font-size:1rem;color:#e7e2f0;}
   .row .hint{font-size:.74rem;color:var(--mist-dim);margin-top:2px;}
-  .stepper{display:flex;align-items:center;gap:12px;}
-  .step-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
-    background:var(--panel-2);color:var(--brass-hi);font-size:1.4rem;line-height:1;cursor:pointer;
+  .stepper{display:flex;align-items:center;gap:6px;}
+  .step-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--brass-hi);font-size:1.2rem;line-height:1;cursor:pointer;
     display:grid;place-items:center;user-select:none;}
   .step-btn:active{background:#322c42;}
-  .val{min-width:74px;text-align:center;font-variant-numeric:tabular-nums;
-    font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:500;font-size:1.45rem;color:#efe9dc;}
-  .val.small{min-width:34px;font-size:1.3rem;}
+  .val{min-width:52px;text-align:center;font-variant-numeric:tabular-nums;
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:500;font-size:1.15rem;color:#efe9dc;}
+  .val.small{min-width:22px;font-size:1.1rem;}
 
   .sounds{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .chip{cursor:pointer;border:1px solid var(--line);background:var(--panel-2);border-radius:14px;
-    padding:14px;display:flex;flex-direction:column;gap:3px;transition:border-color .2s,background .2s;}
+    padding:12px 14px;display:flex;flex-direction:column;gap:2px;transition:border-color .2s,background .2s;}
   .chip.sel{border-color:var(--brass);background:#2a2436;}
   .chip .cn{color:#e7e2f0;font-size:.95rem;}
   .chip .cd{color:var(--mist-dim);font-size:.72rem;}
-  .chip .play{align-self:flex-start;margin-top:6px;font-size:.7rem;letter-spacing:.1em;
-    text-transform:uppercase;color:var(--brass-hi);border:1px solid var(--line);border-radius:999px;
-    padding:5px 12px;background:transparent;cursor:pointer;}
   .done-btn{width:100%;appearance:none;border:none;cursor:pointer;margin-top:6px;
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:15px;border-radius:14px;font-size:.92rem;}
@@ -189,32 +196,48 @@
 <div class="sheet" id="sheet">
   <div class="grab"></div>
   <h2>Adjust your session</h2>
-  <div class="lead">Times, the bowl, and how many strikes end each stage. Saved automatically.</div>
-
   <div class="group">
-    <div class="glabel">Stage lengths</div>
-    <div class="row">
-      <div><div class="name">Settle in</div><div class="hint">eyes closed, before the first bowl</div></div>
+    <div class="combo-head"><span>Stage</span><span>Length</span><span>Strikes</span></div>
+
+    <div class="stage-row">
+      <div class="sname">Settle in</div>
       <div class="stepper">
         <button class="step-btn" data-dur="settle" data-d="-1">–</button>
         <div class="val" id="v-settle">1:00</div>
         <button class="step-btn" data-dur="settle" data-d="1">+</button>
       </div>
-    </div>
-    <div class="row">
-      <div><div class="name">Meditation</div><div class="hint">the main, quiet stretch</div></div>
       <div class="stepper">
-        <button class="step-btn" data-dur="meditate" data-d="-1">–</button>
-        <div class="val" id="v-meditate">15:00</div>
-        <button class="step-btn" data-dur="meditate" data-d="1">+</button>
+        <button class="step-btn" data-bell="settle" data-d="-1">–</button>
+        <div class="val small" id="b-settle">1</div>
+        <button class="step-btn" data-bell="settle" data-d="1">+</button>
       </div>
     </div>
-    <div class="row">
-      <div><div class="name">Return</div><div class="hint">easing back to reality</div></div>
+
+    <div class="stage-row">
+      <div class="sname">Meditation</div>
+      <div class="stepper">
+        <button class="step-btn" data-dur="meditate" data-d="-1">–</button>
+        <div class="val" id="v-meditate">20:00</div>
+        <button class="step-btn" data-dur="meditate" data-d="1">+</button>
+      </div>
+      <div class="stepper">
+        <button class="step-btn" data-bell="meditate" data-d="-1">–</button>
+        <div class="val small" id="b-meditate">3</div>
+        <button class="step-btn" data-bell="meditate" data-d="1">+</button>
+      </div>
+    </div>
+
+    <div class="stage-row">
+      <div class="sname">Return</div>
       <div class="stepper">
         <button class="step-btn" data-dur="return" data-d="-1">–</button>
         <div class="val" id="v-return">1:00</div>
         <button class="step-btn" data-dur="return" data-d="1">+</button>
+      </div>
+      <div class="stepper">
+        <button class="step-btn" data-bell="return" data-d="-1">–</button>
+        <div class="val small" id="b-return">1</div>
+        <button class="step-btn" data-bell="return" data-d="1">+</button>
       </div>
     </div>
   </div>
@@ -222,34 +245,6 @@
   <div class="group">
     <div class="glabel">The bowl</div>
     <div class="sounds" id="sounds"></div>
-  </div>
-
-  <div class="group">
-    <div class="glabel">Strikes at the end of each stage</div>
-    <div class="row">
-      <div class="name">Settle in</div>
-      <div class="stepper">
-        <button class="step-btn" data-bell="settle" data-d="-1">–</button>
-        <div class="val small" id="b-settle">1</div>
-        <button class="step-btn" data-bell="settle" data-d="1">+</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="name">Meditation</div>
-      <div class="stepper">
-        <button class="step-btn" data-bell="meditate" data-d="-1">–</button>
-        <div class="val small" id="b-meditate">3</div>
-        <button class="step-btn" data-bell="meditate" data-d="1">+</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="name">Return</div>
-      <div class="stepper">
-        <button class="step-btn" data-bell="return" data-d="-1">–</button>
-        <div class="val small" id="b-return">1</div>
-        <button class="step-btn" data-bell="return" data-d="1">+</button>
-      </div>
-    </div>
   </div>
 
   <button class="done-btn" id="done">Done</button>
@@ -557,14 +552,12 @@ Object.entries(PRESETS).forEach(([key,p])=>{
   const chip=document.createElement("div");
   chip.className="chip"+(cfg.sound===key?" sel":"");
   chip.dataset.key=key;
-  chip.innerHTML=`<div class="cn">${p.name}</div><div class="cd">${p.desc}</div>
-    <button class="play" type="button">▶ Hear it</button>`;
-  chip.addEventListener("click",e=>{
+  chip.innerHTML=`<div class="cn">${p.name}</div><div class="cd">${p.desc}</div>`;
+  chip.addEventListener("click",()=>{
     cfg.sound=key; saveCfg();
     [...soundsEl.children].forEach(c=>c.classList.toggle("sel",c.dataset.key===key));
-    if(!e.target.classList.contains("play")) ringBowl(key,1);
+    ringBowl(key,1);   // choosing a bowl plays it
   });
-  chip.querySelector(".play").addEventListener("click",e=>{ e.stopPropagation(); ringBowl(key,1); });
   soundsEl.appendChild(chip);
 });
 
