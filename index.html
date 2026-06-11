@@ -45,6 +45,15 @@
     background:radial-gradient(60% 45% at 50% 42%, var(--cool) 0%, transparent 70%);
     opacity:.16;transition:background 2.5s ease, opacity 2.5s ease;
   }
+  /* low-power rest screen: pure black (OLED pixels switch off), no motion, no audio */
+  #rest{position:fixed;inset:0;z-index:50;background:#000;opacity:0;pointer-events:none;
+    transition:opacity 2.6s ease;}
+  body.resting #rest{opacity:1;pointer-events:auto;}
+  body.resting #glow{opacity:0;}
+  #rest .resthint{position:absolute;left:0;right:0;bottom:14%;text-align:center;
+    color:#34304a;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;opacity:0;}
+  body.resting #rest .resthint{animation:fadeHint 7s ease forwards;}
+  @keyframes fadeHint{0%{opacity:0;}18%,55%{opacity:.5;}100%{opacity:0;}}
   .wrap{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:clamp(20px,5vh,46px);width:100%;max-width:520px;margin:0 auto;padding:24px;}
 
@@ -144,6 +153,7 @@
 </head>
 <body>
 <div id="glow"></div>
+<div id="rest"><span class="resthint">tap to return</span></div>
 
 <div class="wrap">
   <div class="eyebrow" id="eyebrow">Singing&nbsp;Bowl</div>
@@ -323,6 +333,7 @@ function startKeepAlive(){
     keepAlive=src;
   }catch(e){}
 }
+function stopKeepAlive(){ try{ keepAlive && keepAlive.stop(); }catch(e){} keepAlive=null; }
 function strike(preset, t){
   const out = audio.createGain(); out.gain.value=preset.vol; out.connect(master);
   preset.partials.forEach(p=>{
@@ -364,7 +375,7 @@ function showRipple(){
 const $ = s=>document.querySelector(s);
 const eyebrow=$("#eyebrow"), timeEl=$("#time"), subEl=$("#sub"), progEl=$("#prog");
 const bowlEl=$("#bowl"), rippleEl=$("#ripple"), glow=$("#glow"), pipsEl=$("#pips");
-const primary=$("#primary"), adjustBtn=$("#adjust");
+const primary=$("#primary"), adjustBtn=$("#adjust"), restEl=$("#rest");
 const sheet=$("#sheet"), scrim=$("#scrim");
 const CIRC = 2*Math.PI*92;
 progEl.setAttribute("stroke-dasharray", CIRC.toFixed(2));
@@ -429,7 +440,9 @@ function tick(){
 
 function begin(){
   clearTimeout(graceTimer);
+  leaveRest();
   ensureAudio();
+  startKeepAlive();
   requestWake();
   state="running"; bowlEl.classList.add("running");
   primary.textContent="Pause";
@@ -456,10 +469,17 @@ function finish(){
   eyebrow.textContent="Complete"; timeEl.textContent="0:00"; subEl.textContent="rest a moment";
   [...pipsEl.children].forEach(p=>p.className="pip done");
   primary.textContent="Begin again";
-  // keep the screen on for 30s to ease out, then hand control back so the battery rests
+  // hold the screen ~30s to ease out, then power down to the dark rest screen
   clearTimeout(graceTimer);
-  graceTimer=setTimeout(releaseWake, 30000);
+  graceTimer=setTimeout(windDown, 30000);
 }
+function windDown(){
+  releaseWake();                                   // let the phone's auto-lock take over
+  stopKeepAlive();                                 // stop the silent audio keep-alive
+  try{ audio && audio.suspend(); }catch(e){}       // park the audio engine
+  document.body.classList.add("resting");          // fade everything to pure black
+}
+function leaveRest(){ document.body.classList.remove("resting"); }
 function reset(){
   state="idle"; cancelAnimationFrame(raf); bowlEl.classList.remove("running");
   releaseWake(); renderIdle();
@@ -480,6 +500,8 @@ primary.addEventListener("click",()=>{
   else if(state==="running") pause();
   else if(state==="paused") resume();
 });
+// tapping the dark rest screen wakes the app back to its ready state
+restEl.addEventListener("click",()=>{ leaveRest(); state="idle"; renderIdle(); });
 
 /* ---------- settings sheet ---------- */
 function openSheet(){ sheet.classList.add("open"); scrim.classList.add("open"); }
