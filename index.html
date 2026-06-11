@@ -67,8 +67,8 @@
   @keyframes ripple{0%{transform:scale(.7);opacity:.7;}100%{transform:scale(1.7);opacity:0;}}
 
   .time{position:relative;z-index:2;font-variant-numeric:tabular-nums;
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-    font-weight:300;font-size:clamp(3.4rem,17vw,5rem);color:#efe9dc;line-height:1;}
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-weight:500;letter-spacing:-.01em;font-size:clamp(3.4rem,17vw,5rem);color:#efe9dc;line-height:1;}
   .sub{position:relative;z-index:2;margin-top:.5em;font-size:.8rem;letter-spacing:.18em;
     text-transform:uppercase;color:var(--mist-dim);}
 
@@ -102,8 +102,8 @@
     padding:10px 22px calc(28px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;}
   .sheet.open{transform:translateY(0);}
   .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 18px;}
-  .sheet h2{font-family:"Iowan Old Style",Georgia,serif;font-weight:400;color:#efe9dc;
-    font-size:1.35rem;margin-bottom:4px;}
+  .sheet h2{font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:600;color:#efe9dc;
+    font-size:1.3rem;letter-spacing:-.01em;margin-bottom:4px;}
   .sheet .lead{color:var(--mist-dim);font-size:.85rem;margin-bottom:22px;}
   .group{margin-bottom:26px;}
   .group > .glabel{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
@@ -120,7 +120,7 @@
     display:grid;place-items:center;user-select:none;}
   .step-btn:active{background:#322c42;}
   .val{min-width:74px;text-align:center;font-variant-numeric:tabular-nums;
-    font-family:"Iowan Old Style",Georgia,serif;font-size:1.5rem;color:#efe9dc;}
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:500;font-size:1.45rem;color:#efe9dc;}
   .val.small{min-width:34px;font-size:1.3rem;}
 
   .sounds{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -169,7 +169,6 @@
   <div class="controls">
     <button class="primary" id="primary">Begin</button>
     <div class="secondary">
-      <button class="ghost" id="reset">Reset</button>
       <button class="ghost" id="adjust">Adjust</button>
     </div>
   </div>
@@ -255,17 +254,17 @@ const store = {
 
 /* ---------- settings ---------- */
 const DEFAULTS = {
-  settle:60, meditate:900, return:60,
+  settle:60, meditate:1200, return:60,    // meditation defaults to 20 minutes
   sound:"tibetan",
   bells:{settle:1, meditate:3, return:1}
 };
-let cfg = loadCfg();
+const clone = o => JSON.parse(JSON.stringify(o));
 function loadCfg(){
   const raw = store.get("bowlCfg");
-  if(!raw) return structuredClone(DEFAULTS);
+  if(!raw) return clone(DEFAULTS);
   try{
     const p = JSON.parse(raw);
-    return {
+    const c = {
       settle:clampSec(p.settle ?? DEFAULTS.settle),
       meditate:clampSec(p.meditate ?? DEFAULTS.meditate),
       return:clampSec(p.return ?? DEFAULTS.return),
@@ -276,11 +275,15 @@ function loadCfg(){
         return:clampBell(p.bells?.return ?? 1)
       }
     };
-  }catch(e){ return structuredClone(DEFAULTS); }
+    // one-time bump to the new 20-minute default for anyone still on the old 15
+    if(!p.v && c.meditate===900) c.meditate=1200;
+    return c;
+  }catch(e){ return clone(DEFAULTS); }
 }
-function saveCfg(){ store.set("bowlCfg", JSON.stringify(cfg)); }
+function saveCfg(){ store.set("bowlCfg", JSON.stringify({v:2, ...cfg})); }
 const clampSec  = s => Math.max(0, Math.min(60*120, Math.round(s)));
 const clampBell = n => Math.max(0, Math.min(8, Math.round(n)));
+// cfg is loaded further down, AFTER PRESETS exists (loadCfg references it)
 
 /* ---------- bowl sounds (Web Audio, no files) ---------- */
 const PRESETS = {
@@ -294,14 +297,31 @@ const PRESETS = {
     partials:[{r:1,g:.4,d:3},{r:2.0,g:.18,d:2.6},{r:3.01,g:.09,d:2},{r:5.0,g:.04,d:1.4}] }
 };
 
-let audio=null, master=null;
+// now that PRESETS exists, it's safe to restore saved settings
+let cfg = loadCfg();
+saveCfg();   // write a clean baseline (also stamps the schema version)
+
+let audio=null, master=null, keepAlive=null;
 function ensureAudio(){
   if(!audio){
     audio = new (window.AudioContext||window.webkitAudioContext)();
     master = audio.createGain(); master.gain.value=1; master.connect(audio.destination);
+    startKeepAlive();
   }
   if(audio.state==="suspended") audio.resume();
   return audio;
+}
+// A silent looping buffer keeps iOS from putting the audio engine to sleep
+// during the long quiet stretch, so the strikes at the end of every stage sound.
+function startKeepAlive(){
+  if(keepAlive || !audio) return;
+  try{
+    const buf=audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+    const src=audio.createBufferSource(); src.buffer=buf; src.loop=true;
+    const g=audio.createGain(); g.gain.value=0;
+    src.connect(g); g.connect(audio.destination); src.start();
+    keepAlive=src;
+  }catch(e){}
 }
 function strike(preset, t){
   const out = audio.createGain(); out.gain.value=preset.vol; out.connect(master);
@@ -323,13 +343,18 @@ function strike(preset, t){
 function ringBowl(presetKey, count){
   if(count<=0) return;
   ensureAudio();
-  const preset = PRESETS[presetKey];
-  const t0 = audio.currentTime + 0.05;
-  for(let i=0;i<count;i++){
-    const t = t0 + i*preset.gap;
-    strike(preset, t);
-    setTimeout(showRipple, Math.max(0,(t-audio.currentTime))*1000);
-  }
+  const fire = ()=>{
+    const preset = PRESETS[presetKey];
+    const t0 = audio.currentTime + 0.06;
+    for(let i=0;i<count;i++){
+      const t = t0 + i*preset.gap;
+      strike(preset, t);
+      setTimeout(showRipple, Math.max(0,(t-audio.currentTime))*1000);
+    }
+  };
+  // wait for the context to actually be running, or the first strike can be silent
+  if(audio.state==="suspended"){ audio.resume().then(fire).catch(fire); }
+  else fire();
 }
 function showRipple(){
   rippleEl.classList.remove("go"); void rippleEl.offsetWidth; rippleEl.classList.add("go");
@@ -339,7 +364,7 @@ function showRipple(){
 const $ = s=>document.querySelector(s);
 const eyebrow=$("#eyebrow"), timeEl=$("#time"), subEl=$("#sub"), progEl=$("#prog");
 const bowlEl=$("#bowl"), rippleEl=$("#ripple"), glow=$("#glow"), pipsEl=$("#pips");
-const primary=$("#primary"), resetBtn=$("#reset"), adjustBtn=$("#adjust");
+const primary=$("#primary"), adjustBtn=$("#adjust");
 const sheet=$("#sheet"), scrim=$("#scrim");
 const CIRC = 2*Math.PI*92;
 progEl.setAttribute("stroke-dasharray", CIRC.toFixed(2));
@@ -355,7 +380,7 @@ let state="idle";            // idle | running | paused | done
 let stageIdx=0;
 let stageEnd=0;              // performance.now() when current stage ends
 let remainAtPause=0;
-let raf=null, wakeLock=null;
+let raf=null, wakeLock=null, graceTimer=null;
 
 function fmt(sec){ sec=Math.max(0,Math.ceil(sec)); const m=Math.floor(sec/60), s=sec%60;
   return m+":"+String(s).padStart(2,"0"); }
@@ -403,6 +428,7 @@ function tick(){
 }
 
 function begin(){
+  clearTimeout(graceTimer);
   ensureAudio();
   requestWake();
   state="running"; bowlEl.classList.add("running");
@@ -430,7 +456,9 @@ function finish(){
   eyebrow.textContent="Complete"; timeEl.textContent="0:00"; subEl.textContent="rest a moment";
   [...pipsEl.children].forEach(p=>p.className="pip done");
   primary.textContent="Begin again";
-  releaseWake();
+  // keep the screen on for 30s to ease out, then hand control back so the battery rests
+  clearTimeout(graceTimer);
+  graceTimer=setTimeout(releaseWake, 30000);
 }
 function reset(){
   state="idle"; cancelAnimationFrame(raf); bowlEl.classList.remove("running");
@@ -452,7 +480,6 @@ primary.addEventListener("click",()=>{
   else if(state==="running") pause();
   else if(state==="paused") resume();
 });
-resetBtn.addEventListener("click",reset);
 
 /* ---------- settings sheet ---------- */
 function openSheet(){ sheet.classList.add("open"); scrim.classList.add("open"); }
