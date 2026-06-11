@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Singing Bowl</title>
+
+<!-- PWA / install -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14121b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bowl">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<style>
+  :root{
+    --night:#14121b;
+    --panel:#1d1a26;
+    --panel-2:#262232;
+    --line:#332e42;
+    --mist:#b8b3c4;
+    --mist-dim:#7d7790;
+    --brass:#c8a45c;
+    --brass-hi:#e8c987;
+    --cool:#8f8ad0;     /* settle in */
+    --ember:#d98a5b;    /* return */
+    --warm:#c8a45c;     /* meditation */
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--night);
+    color:var(--mist);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overflow:hidden;
+    -webkit-user-select:none;user-select:none;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  /* ambient glow that shifts colour with the phase */
+  #glow{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(60% 45% at 50% 42%, var(--cool) 0%, transparent 70%);
+    opacity:.16;transition:background 2.5s ease, opacity 2.5s ease;
+  }
+  .wrap{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:clamp(20px,5vh,46px);width:100%;max-width:520px;margin:0 auto;padding:24px;}
+
+  .eyebrow{font-size:.82rem;letter-spacing:.32em;text-transform:uppercase;color:var(--mist-dim);
+    font-weight:500;min-height:1.1em;transition:color .8s ease;}
+
+  /* breathing bowl ring */
+  .bowl{position:relative;width:min(74vw,300px);aspect-ratio:1;display:grid;place-items:center;}
+  .bowl svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);}
+  .bowl .track{fill:none;stroke:var(--line);stroke-width:3;}
+  .bowl .prog{fill:none;stroke:var(--brass);stroke-width:5;stroke-linecap:round;
+    transition:stroke .8s ease;filter:drop-shadow(0 0 6px rgba(200,164,92,.45));}
+  .breather{position:absolute;width:78%;aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 50% 45%, rgba(232,201,135,.10), transparent 68%);}
+  .running .breather{animation:breathe 10s ease-in-out infinite;}
+  @keyframes breathe{0%,100%{transform:scale(.92);opacity:.55;}45%{transform:scale(1.06);opacity:1;}}
+  .ripple{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;border:2px solid var(--brass-hi);
+    opacity:0;pointer-events:none;}
+  .ripple.go{animation:ripple 2.6s ease-out;}
+  @keyframes ripple{0%{transform:scale(.7);opacity:.7;}100%{transform:scale(1.7);opacity:0;}}
+
+  .time{position:relative;z-index:2;font-variant-numeric:tabular-nums;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-weight:300;font-size:clamp(3.4rem,17vw,5rem);color:#efe9dc;line-height:1;}
+  .sub{position:relative;z-index:2;margin-top:.5em;font-size:.8rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--mist-dim);}
+
+  .pips{display:flex;gap:12px;}
+  .pip{width:8px;height:8px;border-radius:50%;background:var(--line);transition:background .5s,transform .5s;}
+  .pip.active{background:var(--brass-hi);transform:scale(1.35);}
+  .pip.done{background:var(--mist-dim);}
+
+  .controls{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;}
+  .primary{appearance:none;border:none;cursor:pointer;
+    background:linear-gradient(180deg,var(--brass-hi),var(--brass));
+    color:#241c0c;font-size:1.05rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    padding:16px 56px;border-radius:999px;box-shadow:0 8px 30px rgba(200,164,92,.28);
+    transition:transform .15s ease, box-shadow .3s ease;}
+  .primary:active{transform:scale(.96);}
+  .secondary{display:flex;gap:14px;}
+  .ghost{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
+    color:var(--mist);font-size:.82rem;letter-spacing:.08em;padding:11px 22px;border-radius:999px;
+    transition:border-color .2s,color .2s;}
+  .ghost:active{border-color:var(--brass);color:var(--brass-hi);}
+
+  /* settings sheet */
+  .scrim{position:fixed;inset:0;z-index:5;background:rgba(8,7,12,.6);backdrop-filter:blur(3px);
+    opacity:0;pointer-events:none;transition:opacity .3s ease;}
+  .scrim.open{opacity:1;pointer-events:auto;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;
+    background:var(--panel);border-top-left-radius:26px;border-top-right-radius:26px;
+    border-top:1px solid var(--line);
+    transform:translateY(100%);transition:transform .35s cubic-bezier(.22,.61,.36,1);
+    max-height:90vh;overflow-y:auto;
+    padding:10px 22px calc(28px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;}
+  .sheet.open{transform:translateY(0);}
+  .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 18px;}
+  .sheet h2{font-family:"Iowan Old Style",Georgia,serif;font-weight:400;color:#efe9dc;
+    font-size:1.35rem;margin-bottom:4px;}
+  .sheet .lead{color:var(--mist-dim);font-size:.85rem;margin-bottom:22px;}
+  .group{margin-bottom:26px;}
+  .group > .glabel{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--mist-dim);margin-bottom:12px;}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 0;border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row .name{font-size:1rem;color:#e7e2f0;}
+  .row .hint{font-size:.74rem;color:var(--mist-dim);margin-top:2px;}
+  .stepper{display:flex;align-items:center;gap:12px;}
+  .step-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--brass-hi);font-size:1.4rem;line-height:1;cursor:pointer;
+    display:grid;place-items:center;user-select:none;}
+  .step-btn:active{background:#322c42;}
+  .val{min-width:74px;text-align:center;font-variant-numeric:tabular-nums;
+    font-family:"Iowan Old Style",Georgia,serif;font-size:1.5rem;color:#efe9dc;}
+  .val.small{min-width:34px;font-size:1.3rem;}
+
+  .sounds{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .chip{cursor:pointer;border:1px solid var(--line);background:var(--panel-2);border-radius:14px;
+    padding:14px;display:flex;flex-direction:column;gap:3px;transition:border-color .2s,background .2s;}
+  .chip.sel{border-color:var(--brass);background:#2a2436;}
+  .chip .cn{color:#e7e2f0;font-size:.95rem;}
+  .chip .cd{color:var(--mist-dim);font-size:.72rem;}
+  .chip .play{align-self:flex-start;margin-top:6px;font-size:.7rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--brass-hi);border:1px solid var(--line);border-radius:999px;
+    padding:5px 12px;background:transparent;cursor:pointer;}
+  .done-btn{width:100%;appearance:none;border:none;cursor:pointer;margin-top:6px;
+    background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
+    letter-spacing:.1em;text-transform:uppercase;padding:15px;border-radius:14px;font-size:.92rem;}
+
+  @media (prefers-reduced-motion: reduce){
+    .running .breather{animation:none;}
+    .ripple.go{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div id="glow"></div>
+
+<div class="wrap">
+  <div class="eyebrow" id="eyebrow">Singing&nbsp;Bowl</div>
+
+  <div class="bowl" id="bowl">
+    <svg viewBox="0 0 200 200">
+      <circle class="track" cx="100" cy="100" r="92"></circle>
+      <circle class="prog" id="prog" cx="100" cy="100" r="92"
+              stroke-dasharray="578.05" stroke-dashoffset="578.05"></circle>
+    </svg>
+    <div class="breather"></div>
+    <div class="ripple" id="ripple"></div>
+    <div style="text-align:center">
+      <div class="time" id="time">15:00</div>
+      <div class="sub" id="sub">total</div>
+    </div>
+  </div>
+
+  <div class="pips" id="pips">
+    <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="primary">Begin</button>
+    <div class="secondary">
+      <button class="ghost" id="reset">Reset</button>
+      <button class="ghost" id="adjust">Adjust</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h2>Adjust your session</h2>
+  <div class="lead">Times, the bowl, and how many strikes end each stage. Saved automatically.</div>
+
+  <div class="group">
+    <div class="glabel">Stage lengths</div>
+    <div class="row">
+      <div><div class="name">Settle in</div><div class="hint">eyes closed, before the first bowl</div></div>
+      <div class="stepper">
+        <button class="step-btn" data-dur="settle" data-d="-1">–</button>
+        <div class="val" id="v-settle">1:00</div>
+        <button class="step-btn" data-dur="settle" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <div><div class="name">Meditation</div><div class="hint">the main, quiet stretch</div></div>
+      <div class="stepper">
+        <button class="step-btn" data-dur="meditate" data-d="-1">–</button>
+        <div class="val" id="v-meditate">15:00</div>
+        <button class="step-btn" data-dur="meditate" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <div><div class="name">Return</div><div class="hint">easing back to reality</div></div>
+      <div class="stepper">
+        <button class="step-btn" data-dur="return" data-d="-1">–</button>
+        <div class="val" id="v-return">1:00</div>
+        <button class="step-btn" data-dur="return" data-d="1">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="glabel">The bowl</div>
+    <div class="sounds" id="sounds"></div>
+  </div>
+
+  <div class="group">
+    <div class="glabel">Strikes at the end of each stage</div>
+    <div class="row">
+      <div class="name">Settle in</div>
+      <div class="stepper">
+        <button class="step-btn" data-bell="settle" data-d="-1">–</button>
+        <div class="val small" id="b-settle">1</div>
+        <button class="step-btn" data-bell="settle" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Meditation</div>
+      <div class="stepper">
+        <button class="step-btn" data-bell="meditate" data-d="-1">–</button>
+        <div class="val small" id="b-meditate">3</div>
+        <button class="step-btn" data-bell="meditate" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Return</div>
+      <div class="stepper">
+        <button class="step-btn" data-bell="return" data-d="-1">–</button>
+        <div class="val small" id="b-return">1</div>
+        <button class="step-btn" data-bell="return" data-d="1">+</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="done-btn" id="done">Done</button>
+</div>
+
+<script>
+/* ---------- safe storage (degrades gracefully where storage is blocked) ---------- */
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+
+/* ---------- settings ---------- */
+const DEFAULTS = {
+  settle:60, meditate:900, return:60,
+  sound:"tibetan",
+  bells:{settle:1, meditate:3, return:1}
+};
+let cfg = loadCfg();
+function loadCfg(){
+  const raw = store.get("bowlCfg");
+  if(!raw) return structuredClone(DEFAULTS);
+  try{
+    const p = JSON.parse(raw);
+    return {
+      settle:clampSec(p.settle ?? DEFAULTS.settle),
+      meditate:clampSec(p.meditate ?? DEFAULTS.meditate),
+      return:clampSec(p.return ?? DEFAULTS.return),
+      sound: PRESETS[p.sound] ? p.sound : DEFAULTS.sound,
+      bells:{
+        settle:clampBell(p.bells?.settle ?? 1),
+        meditate:clampBell(p.bells?.meditate ?? 3),
+        return:clampBell(p.bells?.return ?? 1)
+      }
+    };
+  }catch(e){ return structuredClone(DEFAULTS); }
+}
+function saveCfg(){ store.set("bowlCfg", JSON.stringify(cfg)); }
+const clampSec  = s => Math.max(0, Math.min(60*120, Math.round(s)));
+const clampBell = n => Math.max(0, Math.min(8, Math.round(n)));
+
+/* ---------- bowl sounds (Web Audio, no files) ---------- */
+const PRESETS = {
+  tibetan:{ name:"Tibetan bowl", desc:"low, warm, long decay", freq:174.6, vol:0.5, beat:6, gap:3.0,
+    partials:[{r:1,g:.5,d:6.5},{r:2.01,g:.28,d:5},{r:2.78,g:.16,d:4},{r:4.04,g:.10,d:3},{r:5.43,g:.06,d:2.4}] },
+  crystal:{ name:"Crystal bowl", desc:"bright, pure, shimmering", freq:432, vol:0.42, beat:4, gap:3.0,
+    partials:[{r:1,g:.5,d:7},{r:2.0,g:.22,d:5.5},{r:3.0,g:.12,d:4},{r:4.2,g:.06,d:3}] },
+  temple:{ name:"Temple bell", desc:"metallic, clear, focusing", freq:261.6, vol:0.4, beat:8, gap:2.8,
+    partials:[{r:1,g:.42,d:4},{r:2.76,g:.3,d:3},{r:5.4,g:.18,d:2.2},{r:8.93,g:.08,d:1.4}] },
+  chime:{ name:"Soft chime", desc:"gentle, light, brief", freq:528, vol:0.38, beat:3, gap:2.4,
+    partials:[{r:1,g:.4,d:3},{r:2.0,g:.18,d:2.6},{r:3.01,g:.09,d:2},{r:5.0,g:.04,d:1.4}] }
+};
+
+let audio=null, master=null;
+function ensureAudio(){
+  if(!audio){
+    audio = new (window.AudioContext||window.webkitAudioContext)();
+    master = audio.createGain(); master.gain.value=1; master.connect(audio.destination);
+  }
+  if(audio.state==="suspended") audio.resume();
+  return audio;
+}
+function strike(preset, t){
+  const out = audio.createGain(); out.gain.value=preset.vol; out.connect(master);
+  preset.partials.forEach(p=>{
+    const voices = p.r<3 ? [0, preset.beat] : [0];   // beating only on low partials
+    voices.forEach(det=>{
+      const osc=audio.createOscillator(); osc.type="sine";
+      osc.frequency.value=preset.freq*p.r; osc.detune.value=det;
+      const g=audio.createGain();
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(p.g,t+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+p.d);
+      osc.connect(g); g.connect(out);
+      osc.start(t); osc.stop(t+p.d+0.05);
+    });
+  });
+}
+// schedule `count` strikes; fire a visual ripple in sync with each
+function ringBowl(presetKey, count){
+  if(count<=0) return;
+  ensureAudio();
+  const preset = PRESETS[presetKey];
+  const t0 = audio.currentTime + 0.05;
+  for(let i=0;i<count;i++){
+    const t = t0 + i*preset.gap;
+    strike(preset, t);
+    setTimeout(showRipple, Math.max(0,(t-audio.currentTime))*1000);
+  }
+}
+function showRipple(){
+  rippleEl.classList.remove("go"); void rippleEl.offsetWidth; rippleEl.classList.add("go");
+}
+
+/* ---------- elements ---------- */
+const $ = s=>document.querySelector(s);
+const eyebrow=$("#eyebrow"), timeEl=$("#time"), subEl=$("#sub"), progEl=$("#prog");
+const bowlEl=$("#bowl"), rippleEl=$("#ripple"), glow=$("#glow"), pipsEl=$("#pips");
+const primary=$("#primary"), resetBtn=$("#reset"), adjustBtn=$("#adjust");
+const sheet=$("#sheet"), scrim=$("#scrim");
+const CIRC = 2*Math.PI*92;
+progEl.setAttribute("stroke-dasharray", CIRC.toFixed(2));
+
+const STAGES=[
+  {key:"settle",   label:"Settle in",  color:"var(--cool)",  glow:"#8f8ad0"},
+  {key:"meditate", label:"Meditation", color:"var(--warm)",  glow:"#c8a45c"},
+  {key:"return",   label:"Return",     color:"var(--ember)", glow:"#d98a5b"}
+];
+
+/* ---------- timer engine (timestamp based, no drift) ---------- */
+let state="idle";            // idle | running | paused | done
+let stageIdx=0;
+let stageEnd=0;              // performance.now() when current stage ends
+let remainAtPause=0;
+let raf=null, wakeLock=null;
+
+function fmt(sec){ sec=Math.max(0,Math.ceil(sec)); const m=Math.floor(sec/60), s=sec%60;
+  return m+":"+String(s).padStart(2,"0"); }
+
+function setGlow(g){ glow.style.background =
+  `radial-gradient(60% 45% at 50% 42%, ${g} 0%, transparent 70%)`; }
+
+function renderIdle(){
+  const total = cfg.settle+cfg.meditate+cfg.return;
+  eyebrow.innerHTML="Singing&nbsp;Bowl";
+  timeEl.textContent=fmt(total); subEl.textContent="total";
+  progEl.style.strokeDashoffset=CIRC;
+  progEl.style.stroke="var(--brass)";
+  setGlow("#8f8ad0");
+  [...pipsEl.children].forEach(p=>p.className="pip");
+  primary.textContent="Begin";
+}
+
+function startStage(i){
+  stageIdx=i;
+  const st=STAGES[i];
+  progEl.style.stroke=st.color;
+  setGlow(st.glow);
+  eyebrow.textContent=st.label; subEl.textContent="remaining";
+  [...pipsEl.children].forEach((p,idx)=>{
+    p.className="pip"+(idx<i?" done":idx===i?" active":"");
+  });
+  stageEnd = performance.now() + cfg[st.key]*1000;
+}
+
+function tick(){
+  if(state!=="running") return;
+  const st=STAGES[stageIdx];
+  const dur=cfg[st.key]*1000;
+  const remain=stageEnd-performance.now();
+  const frac = dur>0 ? Math.min(1,Math.max(0,1-remain/dur)) : 1;
+  progEl.style.strokeDashoffset = (CIRC*(1-frac)).toFixed(2);
+  timeEl.textContent = fmt(remain/1000);
+  if(remain<=0){
+    ringBowl(cfg.sound, cfg.bells[st.key]);   // strikes mark the end of this stage
+    if(stageIdx<STAGES.length-1){ startStage(stageIdx+1); }
+    else { finish(); return; }
+  }
+  raf=requestAnimationFrame(tick);
+}
+
+function begin(){
+  ensureAudio();
+  requestWake();
+  state="running"; bowlEl.classList.add("running");
+  primary.textContent="Pause";
+  startStage(0);
+  raf=requestAnimationFrame(tick);
+}
+function pause(){
+  state="paused"; cancelAnimationFrame(raf); bowlEl.classList.remove("running");
+  remainAtPause=stageEnd-performance.now();
+  primary.textContent="Resume";
+  subEl.textContent="paused";
+  releaseWake();
+}
+function resume(){
+  state="running"; bowlEl.classList.add("running");
+  stageEnd=performance.now()+remainAtPause;
+  primary.textContent="Pause"; subEl.textContent="remaining";
+  requestWake();
+  raf=requestAnimationFrame(tick);
+}
+function finish(){
+  state="done"; cancelAnimationFrame(raf); bowlEl.classList.remove("running");
+  progEl.style.strokeDashoffset=0;
+  eyebrow.textContent="Complete"; timeEl.textContent="0:00"; subEl.textContent="rest a moment";
+  [...pipsEl.children].forEach(p=>p.className="pip done");
+  primary.textContent="Begin again";
+  releaseWake();
+}
+function reset(){
+  state="idle"; cancelAnimationFrame(raf); bowlEl.classList.remove("running");
+  releaseWake(); renderIdle();
+}
+
+/* ---------- wake lock (keep the screen on while sitting) ---------- */
+async function requestWake(){
+  try{ if("wakeLock" in navigator){ wakeLock=await navigator.wakeLock.request("screen"); } }catch(e){}
+}
+function releaseWake(){ try{ wakeLock&&wakeLock.release(); }catch(e){} wakeLock=null; }
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible" && state==="running" && !wakeLock) requestWake();
+});
+
+/* ---------- controls ---------- */
+primary.addEventListener("click",()=>{
+  if(state==="idle"||state==="done") begin();
+  else if(state==="running") pause();
+  else if(state==="paused") resume();
+});
+resetBtn.addEventListener("click",reset);
+
+/* ---------- settings sheet ---------- */
+function openSheet(){ sheet.classList.add("open"); scrim.classList.add("open"); }
+function closeSheet(){ sheet.classList.remove("open"); scrim.classList.remove("open"); }
+adjustBtn.addEventListener("click",()=>{ ensureAudio(); openSheet(); });
+scrim.addEventListener("click",closeSheet);
+$("#done").addEventListener("click",closeSheet);
+
+function refreshSettingsUI(){
+  $("#v-settle").textContent=fmt(cfg.settle);
+  $("#v-meditate").textContent=fmt(cfg.meditate);
+  $("#v-return").textContent=fmt(cfg.return);
+  $("#b-settle").textContent=cfg.bells.settle;
+  $("#b-meditate").textContent=cfg.bells.meditate;
+  $("#b-return").textContent=cfg.bells.return;
+}
+
+// duration steppers: 15s per tap, 1 minute once you've held a moment
+function stepDuration(key, dir, fast){
+  const inc = fast?60:15;
+  cfg[key]=clampSec(cfg[key]+dir*inc);
+  refreshSettingsUI(); if(state==="idle") renderIdle(); saveCfg();
+}
+function stepBell(key, dir){
+  cfg.bells[key]=clampBell(cfg.bells[key]+dir);
+  refreshSettingsUI(); saveCfg();
+}
+
+// press-and-hold to repeat (accelerates) so long times aren't dozens of taps
+function holdRepeat(btn, fn){
+  let t1,t2,startedAt;
+  const start=e=>{
+    e.preventDefault();
+    startedAt=Date.now(); fn(false);
+    t1=setTimeout(()=>{ t2=setInterval(()=>fn(Date.now()-startedAt>1600),110); },480);
+  };
+  const stop=()=>{ clearTimeout(t1); clearInterval(t2); };
+  btn.addEventListener("pointerdown",start);
+  ["pointerup","pointerleave","pointercancel"].forEach(ev=>btn.addEventListener(ev,stop));
+}
+document.querySelectorAll(".step-btn[data-dur]").forEach(btn=>{
+  const key=btn.dataset.dur, dir=+btn.dataset.d;
+  holdRepeat(btn, fast=>stepDuration(key,dir,fast));
+});
+document.querySelectorAll(".step-btn[data-bell]").forEach(btn=>{
+  const key=btn.dataset.bell, dir=+btn.dataset.d;
+  btn.addEventListener("click",()=>stepBell(key,dir));
+});
+
+// sound chips
+const soundsEl=$("#sounds");
+Object.entries(PRESETS).forEach(([key,p])=>{
+  const chip=document.createElement("div");
+  chip.className="chip"+(cfg.sound===key?" sel":"");
+  chip.dataset.key=key;
+  chip.innerHTML=`<div class="cn">${p.name}</div><div class="cd">${p.desc}</div>
+    <button class="play" type="button">▶ Hear it</button>`;
+  chip.addEventListener("click",e=>{
+    cfg.sound=key; saveCfg();
+    [...soundsEl.children].forEach(c=>c.classList.toggle("sel",c.dataset.key===key));
+    if(!e.target.classList.contains("play")) ringBowl(key,1);
+  });
+  chip.querySelector(".play").addEventListener("click",e=>{ e.stopPropagation(); ringBowl(key,1); });
+  soundsEl.appendChild(chip);
+});
+
+/* ---------- init ---------- */
+refreshSettingsUI();
+renderIdle();
+
+/* ---------- service worker (offline / installable) ---------- */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
