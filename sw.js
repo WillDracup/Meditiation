@@ -1,6 +1,6 @@
 /* Cache-first service worker. Everything is local (sounds are synthesised),
    so once cached the app runs with no network at all. Bump CACHE to force an update. */
-const CACHE = "bowl-v5";
+const CACHE = "bowl-v6";
 const ASSETS = [
   ".",
   "index.html",
