@@ -614,7 +614,20 @@ renderIdle();
 
 /* ---------- service worker (offline / installable) ---------- */
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  // Only reload on a genuine *update* (a controller was already in charge),
+  // not on the very first install — and only once, to avoid any reload loop.
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(hadController) location.reload();
+    hadController = true;
+  });
+  window.addEventListener("load",()=>{
+    // updateViaCache:"none" -> the browser fetches sw.js fresh instead of using
+    // its 10-minute HTTP cache, so new versions are noticed right away.
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"})
+      .then(reg=>reg.update())
+      .catch(()=>{});
+  });
 }
 </script>
 </body>

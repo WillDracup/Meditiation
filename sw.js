@@ -2,7 +2,7 @@
    so once cached the app runs with no network at all. Bump CACHE to force an update.
    In dev (localhost / LAN IP) it switches to pure network passthrough so edits
    always show immediately and never get masked by a stale cache. */
-const CACHE = "bowl-v8";
+const CACHE = "bowl-v9";
 const host = self.location.hostname;
 const DEV = host === "localhost" || host === "127.0.0.1" ||
   /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host.endsWith(".local");
