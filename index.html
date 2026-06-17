@@ -177,13 +177,13 @@
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:15px;border-radius:14px;font-size:.92rem;}
 
-  /* transient reminder (e.g. the volume / Silent-switch check on Begin) */
-  .toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translate(-50%,-16px);
-    z-index:7;max-width:90%;width:max-content;background:var(--panel-2);border:1px solid var(--line);
-    color:var(--mist);font-size:.8rem;line-height:1.45;text-align:center;padding:11px 16px;border-radius:14px;
-    box-shadow:0 10px 34px rgba(0,0,0,.45);opacity:0;pointer-events:none;
-    transition:opacity .35s ease, transform .35s ease;}
-  .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
+  /* brief reminder that drops in just under the stage label (e.g. volume check on Begin).
+     Absolutely positioned so it overlays the gap and never nudges the bowl. */
+  .head{position:relative;display:flex;flex-direction:column;align-items:center;}
+  .note{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);
+    width:max-content;max-width:84vw;text-align:center;font-size:.74rem;line-height:1.4;
+    color:var(--mist-dim);opacity:0;transition:opacity .4s ease;pointer-events:none;}
+  .note.show{opacity:1;pointer-events:auto;}
 
   @media (prefers-reduced-motion: reduce){
     .running .breather{animation:none;}
@@ -195,10 +195,12 @@
 </head>
 <body>
 <div id="glow"></div>
-<div class="toast" id="toast"></div>
 
 <div class="wrap">
-  <div class="eyebrow" id="eyebrow">Meditation</div>
+  <div class="head">
+    <div class="eyebrow" id="eyebrow">Meditation</div>
+    <div class="note" id="note"></div>
+  </div>
 
   <div class="bowl" id="bowl">
     <svg viewBox="0 0 200 200">
@@ -424,7 +426,7 @@ const bowlEl=$("#bowl"), rippleEl=$("#ripple"), glow=$("#glow"), pipsEl=$("#pips
 const primary=$("#primary"), adjustBtn=$("#adjust");
 const transport=$("#transport"), toggleBtn=$("#toggleBtn"), stopBtn=$("#stopBtn"), secondary=$("#secondary");
 const sheet=$("#sheet"), scrim=$("#scrim");
-const toastEl=$("#toast");
+const noteEl=$("#note");
 const CIRC = 2*Math.PI*92;
 progEl.setAttribute("stroke-dasharray", CIRC.toFixed(2));
 
@@ -460,12 +462,13 @@ let raf=null, wakeLock=null, graceTimer=null;
 function fmt(sec){ sec=Math.max(0,Math.ceil(sec)); const m=Math.floor(sec/60), s=sec%60;
   return m+":"+String(s).padStart(2,"0"); }
 
-let toastTimer=null;
-function showToast(msg, ms=5200){
-  toastEl.textContent=msg; toastEl.classList.add("show");
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>toastEl.classList.remove("show"), ms);
+let noteTimer=null;
+function showNote(msg, ms=5200){
+  noteEl.textContent=msg; noteEl.classList.add("show");
+  clearTimeout(noteTimer); noteTimer=setTimeout(hideNote, ms);
 }
-toastEl.addEventListener("click",()=>{ clearTimeout(toastTimer); toastEl.classList.remove("show"); });
+function hideNote(){ clearTimeout(noteTimer); noteEl.classList.remove("show"); }
+noteEl.addEventListener("click",hideNote);
 
 function setGlow(g){ glow.style.background =
   `radial-gradient(60% 45% at 50% 42%, ${g} 0%, transparent 70%)`; }
@@ -522,7 +525,7 @@ function begin(){
   // soft starting bell that doubles as a volume / Silent-switch check
   if(cfg.startBell){
     ringBowl(cfg.sound, 1);
-    showToast("Didn't hear the bell? Turn the volume up and switch Silent mode off.");
+    showNote("Didn't hear the bell? Check volume & Silent switch.");
   }
   state="running"; bowlEl.classList.add("running");
   setMode("running");
@@ -565,7 +568,7 @@ function windDown(){
 function reset(){
   state="idle"; cancelAnimationFrame(raf); clearTimeout(graceTimer);
   bowlEl.classList.remove("running","finished"); timeEl.classList.remove("msg");
-  stopKeepAlive(); releaseWake(); renderIdle();
+  stopKeepAlive(); releaseWake(); hideNote(); renderIdle();
 }
 
 /* ---------- wake lock (keep the screen on while sitting) ---------- */
