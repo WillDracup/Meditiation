@@ -84,7 +84,8 @@
   .pip.active{background:var(--brass-hi);transform:scale(1.35);}
   .pip.done{background:var(--mist-dim);}
 
-  .controls{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;}
+  .controls{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;width:100%;
+    min-height:120px;}  /* fixed height so the bowl doesn't shift between idle/running */
   .primary{appearance:none;border:none;cursor:pointer;
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));
     color:#241c0c;font-size:1.05rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
@@ -167,6 +168,14 @@
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:15px;border-radius:14px;font-size:.92rem;}
 
+  /* transient reminder (e.g. the volume / Silent-switch check on Begin) */
+  .toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translate(-50%,-16px);
+    z-index:7;max-width:90%;width:max-content;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--mist);font-size:.8rem;line-height:1.45;text-align:center;padding:11px 16px;border-radius:14px;
+    box-shadow:0 10px 34px rgba(0,0,0,.45);opacity:0;pointer-events:none;
+    transition:opacity .35s ease, transform .35s ease;}
+  .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
+
   @media (prefers-reduced-motion: reduce){
     .running .breather{animation:none;}
     .ripple.go{animation:none;}
@@ -177,6 +186,7 @@
 </head>
 <body>
 <div id="glow"></div>
+<div class="toast" id="toast"></div>
 
 <div class="wrap">
   <div class="eyebrow" id="eyebrow">Meditation</div>
@@ -333,6 +343,9 @@ function ensureAudio(){
     master = audio.createGain(); master.gain.value=1; master.connect(audio.destination);
     startKeepAlive();
   }
+  // iOS 16.4+: route through the "playback" session so the bowls sound even when
+  // the phone's Silent (ring/mute) switch is on — the usual reason they go quiet.
+  try{ if(navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}
   if(audio.state==="suspended") audio.resume();
   return audio;
 }
@@ -393,6 +406,7 @@ const bowlEl=$("#bowl"), rippleEl=$("#ripple"), glow=$("#glow"), pipsEl=$("#pips
 const primary=$("#primary"), adjustBtn=$("#adjust");
 const transport=$("#transport"), toggleBtn=$("#toggleBtn"), stopBtn=$("#stopBtn"), secondary=$("#secondary");
 const sheet=$("#sheet"), scrim=$("#scrim");
+const toastEl=$("#toast");
 const CIRC = 2*Math.PI*92;
 progEl.setAttribute("stroke-dasharray", CIRC.toFixed(2));
 
@@ -427,6 +441,13 @@ let raf=null, wakeLock=null, graceTimer=null;
 
 function fmt(sec){ sec=Math.max(0,Math.ceil(sec)); const m=Math.floor(sec/60), s=sec%60;
   return m+":"+String(s).padStart(2,"0"); }
+
+let toastTimer=null;
+function showToast(msg, ms=5200){
+  toastEl.textContent=msg; toastEl.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>toastEl.classList.remove("show"), ms);
+}
+toastEl.addEventListener("click",()=>{ clearTimeout(toastTimer); toastEl.classList.remove("show"); });
 
 function setGlow(g){ glow.style.background =
   `radial-gradient(60% 45% at 50% 42%, ${g} 0%, transparent 70%)`; }
@@ -480,6 +501,9 @@ function begin(){
   ensureAudio();
   startKeepAlive();
   requestWake();
+  // soft starting bell that doubles as a volume / Silent-switch check
+  ringBowl(cfg.sound, 1);
+  showToast("Didn't hear the bell? Turn the volume up and switch Silent mode off.");
   state="running"; bowlEl.classList.add("running");
   setMode("running");
   startStage(0);
