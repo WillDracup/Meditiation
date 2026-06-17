@@ -158,6 +158,15 @@
     font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:500;font-size:1.15rem;color:#efe9dc;}
   .val.small{min-width:22px;font-size:1.1rem;}
 
+  /* on/off toggle switch */
+  .toggle{appearance:none;cursor:pointer;flex:none;width:52px;height:30px;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel-2);position:relative;
+    transition:background .2s,border-color .2s;}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:var(--mist-dim);transition:transform .2s,background .2s;}
+  .toggle.on{background:#2a2436;border-color:var(--brass);}
+  .toggle.on::after{transform:translateX(22px);background:var(--brass-hi);}
+
   .sounds{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .chip{cursor:pointer;border:1px solid var(--line);background:var(--panel-2);border-radius:14px;
     padding:15px 14px;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s;}
@@ -277,6 +286,16 @@
     <div class="sounds" id="sounds"></div>
   </div>
 
+  <div class="group">
+    <div class="row">
+      <div>
+        <div class="name">Starting bell</div>
+        <div class="hint">A single chime when you press Begin</div>
+      </div>
+      <button class="toggle" id="startBellToggle" role="switch" aria-label="Starting bell"></button>
+    </div>
+  </div>
+
   <button class="done-btn" id="done">Done</button>
 </div>
 
@@ -291,6 +310,7 @@ const store = {
 const DEFAULTS = {
   settle:60, meditate:1200, return:60,    // meditation defaults to 20 minutes
   sound:"tibetan",
+  startBell:true,                         // soft chime when you press Begin
   bells:{settle:1, meditate:3, return:1}
 };
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -304,6 +324,7 @@ function loadCfg(){
       meditate:clampSec(p.meditate ?? DEFAULTS.meditate),
       return:clampSec(p.return ?? DEFAULTS.return),
       sound: PRESETS[p.sound] ? p.sound : DEFAULTS.sound,
+      startBell: p.startBell !== false,   // default on; off only if explicitly saved false
       bells:{
         settle:clampBell(p.bells?.settle ?? 1),
         meditate:clampBell(p.bells?.meditate ?? 3),
@@ -343,9 +364,6 @@ function ensureAudio(){
     master = audio.createGain(); master.gain.value=1; master.connect(audio.destination);
     startKeepAlive();
   }
-  // iOS 16.4+: route through the "playback" session so the bowls sound even when
-  // the phone's Silent (ring/mute) switch is on — the usual reason they go quiet.
-  try{ if(navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}
   if(audio.state==="suspended") audio.resume();
   return audio;
 }
@@ -502,8 +520,10 @@ function begin(){
   startKeepAlive();
   requestWake();
   // soft starting bell that doubles as a volume / Silent-switch check
-  ringBowl(cfg.sound, 1);
-  showToast("Didn't hear the bell? Turn the volume up and switch Silent mode off.");
+  if(cfg.startBell){
+    ringBowl(cfg.sound, 1);
+    showToast("Didn't hear the bell? Turn the volume up and switch Silent mode off.");
+  }
   state="running"; bowlEl.classList.add("running");
   setMode("running");
   startStage(0);
@@ -583,7 +603,12 @@ function refreshSettingsUI(){
   $("#b-settle").textContent=cfg.bells.settle;
   $("#b-meditate").textContent=cfg.bells.meditate;
   $("#b-return").textContent=cfg.bells.return;
+  $("#startBellToggle").classList.toggle("on", cfg.startBell);
 }
+$("#startBellToggle").addEventListener("click",()=>{
+  cfg.startBell=!cfg.startBell;
+  refreshSettingsUI(); saveCfg();
+});
 
 // duration steppers: 15s per tap, 1 minute once you've held a moment
 function stepDuration(key, dir, fast){
