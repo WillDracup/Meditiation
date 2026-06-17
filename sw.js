@@ -1,8 +1,9 @@
-/* Cache-first service worker. Everything is local (sounds are synthesised),
-   so once cached the app runs with no network at all. Bump CACHE to force an update.
-   In dev (localhost / LAN IP) it switches to pure network passthrough so edits
-   always show immediately and never get masked by a stale cache. */
-const CACHE = "bowl-v16";
+/* Network-first service worker.
+   When online, every file is fetched live so new deploys appear immediately on the
+   next open — no waiting for iOS to notice a service-worker update. The cache is kept
+   up to date on each fetch and used as a fallback, so the app still runs fully offline.
+   In dev (localhost / LAN IP) it's pure network passthrough. */
+const CACHE = "bowl-v17";
 const host = self.location.hostname;
 const DEV = host === "localhost" || host === "127.0.0.1" ||
   /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host.endsWith(".local");
@@ -31,13 +32,14 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   if (DEV) return;   // dev: let the browser hit the network directly — always fresh
+  // Network-first: try the live file, refresh the cache, fall back to cache offline.
   e.respondWith(
-    caches.match(e.request).then(hit =>
-      hit || fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match("index.html"))
+    fetch(e.request).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      return res;
+    }).catch(() =>
+      caches.match(e.request).then(hit => hit || caches.match("index.html"))
     )
   );
 });
