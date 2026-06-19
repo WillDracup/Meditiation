@@ -178,6 +178,10 @@
       bottom:calc(env(safe-area-inset-bottom) + 14px);right:calc(env(safe-area-inset-right) + 18px);}
     #stopBtn,#adjust{position:fixed;z-index:4;
       bottom:calc(env(safe-area-inset-bottom) + 14px);left:calc(env(safe-area-inset-left) + 18px);}
+    /* volume note moves under the circle (bottom-centre, between the corner buttons)
+       instead of crowding the label at the top */
+    .note{position:fixed;top:auto;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);
+      transform:translateX(-50%);max-width:min(52vw,340px);}
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -305,10 +309,10 @@ const store = {
 
 /* ---------- settings ---------- */
 const DEFAULTS = {
-  settle:60, meditate:1200, return:60,    // meditation defaults to 20 minutes
+  settle:60, meditate:1200, return:240,   // 1:00 settle / 20:00 meditate / 4:00 return
   sound:"tibetan",
   startBell:true,                         // soft chime when you press Begin
-  bells:{settle:1, meditate:3, return:1}
+  bells:{settle:1, meditate:4, return:3}  // strikes at the end of each stage
 };
 const clone = o => JSON.parse(JSON.stringify(o));
 function loadCfg(){
@@ -323,17 +327,23 @@ function loadCfg(){
       sound: PRESETS[p.sound] ? p.sound : DEFAULTS.sound,
       startBell: p.startBell !== false,   // default on; off only if explicitly saved false
       bells:{
-        settle:clampBell(p.bells?.settle ?? 1),
-        meditate:clampBell(p.bells?.meditate ?? 3),
-        return:clampBell(p.bells?.return ?? 1)
+        settle:clampBell(p.bells?.settle ?? DEFAULTS.bells.settle),
+        meditate:clampBell(p.bells?.meditate ?? DEFAULTS.bells.meditate),
+        return:clampBell(p.bells?.return ?? DEFAULTS.bells.return)
       }
     };
     // one-time bump to the new 20-minute default for anyone still on the old 15
     if(!p.v && c.meditate===900) c.meditate=1200;
+    // v3: roll out the updated defaults (4:00 return + 4/3 strike counts) once
+    if(!(p.v>=3)){
+      c.return = DEFAULTS.return;
+      c.bells.meditate = DEFAULTS.bells.meditate;
+      c.bells.return = DEFAULTS.bells.return;
+    }
     return c;
   }catch(e){ return clone(DEFAULTS); }
 }
-function saveCfg(){ store.set("bowlCfg", JSON.stringify({v:2, ...cfg})); }
+function saveCfg(){ store.set("bowlCfg", JSON.stringify({v:3, ...cfg})); }
 const clampSec  = s => Math.max(0, Math.min(60*120, Math.round(s)));
 const clampBell = n => Math.max(0, Math.min(8, Math.round(n)));
 // cfg is loaded further down, AFTER PRESETS exists (loadCfg references it)
@@ -509,7 +519,9 @@ function tick(){
   progEl.style.strokeDashoffset = (CIRC*(1-frac)).toFixed(2);
   timeEl.textContent = fmt(remain/1000);
   if(remain<=0){
-    ringBowl(cfg.sound, cfg.bells[st.key]);   // strikes mark the end of this stage
+    // a zero-length stage (e.g. Settle in set to 0:00) is skipped silently, so its
+    // strikes don't fire on top of the next stage's
+    if(cfg[st.key] > 0) ringBowl(cfg.sound, cfg.bells[st.key]);   // strikes mark the end of this stage
     if(stageIdx<STAGES.length-1){ startStage(stageIdx+1); }
     else { finish(); return; }
   }
