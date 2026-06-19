@@ -178,18 +178,20 @@
     opacity:0;pointer-events:none;transition:opacity .3s ease;display:grid;place-items:center;padding:14px;}
   .info-scrim.open{opacity:1;pointer-events:auto;}
   .info-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
-    max-width:380px;width:100%;max-height:94vh;overflow-y:auto;padding:18px 20px;
+    max-width:380px;width:100%;max-height:94vh;overflow-y:auto;padding:clamp(20px,3vh,30px) 22px;
     transform:translateY(14px) scale(.98);transition:transform .3s cubic-bezier(.22,.61,.36,1);}
   .info-scrim.open .info-card{transform:none;}
   .info-card h2{font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:600;
-    color:#efe9dc;font-size:1.1rem;letter-spacing:-.01em;margin-bottom:9px;}
-  .info-card .ip{margin-bottom:8px;}
-  .info-card .ih{color:var(--brass-hi);font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:1px;}
-  .info-card .it{color:var(--mist);font-size:.81rem;line-height:1.32;}
+    color:#efe9dc;font-size:1.2rem;letter-spacing:-.01em;margin-bottom:clamp(10px,2.4vh,22px);}
+  /* portrait: roomy, viewport-based gaps so the text fills the screen */
+  .info-card .ip{margin-bottom:clamp(11px,2.8vh,26px);}
+  .info-card .ip:last-child{margin-bottom:0;}
+  .info-card .ih{color:var(--brass-hi);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:3px;}
+  .info-card .it{color:var(--mist);font-size:.87rem;line-height:1.48;}
   .info-card a{color:var(--brass-hi);word-break:break-word;}
-  .info-close{width:100%;appearance:none;border:none;cursor:pointer;margin-top:6px;
+  .info-close{width:100%;appearance:none;border:none;cursor:pointer;margin-top:clamp(10px,2.4vh,20px);
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
-    letter-spacing:.08em;text-transform:uppercase;padding:10px;border-radius:12px;font-size:.84rem;}
+    letter-spacing:.1em;text-transform:uppercase;padding:13px;border-radius:14px;font-size:.9rem;}
 
   /* phone turned sideways: shrink the gaps, size the bowl to the height, and pin the
      two visible buttons to the bottom corners so they never crowd the circle (and never
@@ -206,6 +208,13 @@
        instead of crowding the label at the top */
     .note{position:fixed;top:auto;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);
       transform:translateX(-50%);max-width:min(52vw,340px);}
+    /* help dialog: go wide and two-column so all of it — plus Got it — fits without scrolling */
+    .info-card{max-width:min(94vw,780px);max-height:94vh;padding:14px 22px;}
+    .info-card h2{font-size:1.05rem;margin-bottom:7px;}
+    .isections{display:grid;grid-template-columns:1fr 1fr;column-gap:26px;row-gap:7px;}
+    .info-card .ip{margin-bottom:0;}
+    .info-card .it{font-size:.8rem;line-height:1.32;}
+    .info-close{margin-top:9px;padding:10px;font-size:.85rem;}
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -260,6 +269,7 @@
 <div class="info-scrim" id="infoScrim">
   <div class="info-card">
     <h2>Welcome to TM Bowl!</h2>
+    <div class="isections">
     <div class="ip">
       <div class="ih">Here's how it works</div>
       <div class="it">It's a meditation timer intended for the Twenty Minutes Meditation technique. <a href="https://www.twentyminutesmeditation.co.uk/" target="_blank" rel="noopener noreferrer">www.twentyminutesmeditation.co.uk</a></div>
@@ -283,6 +293,7 @@
     <div class="ip">
       <div class="ih">Making changes</div>
       <div class="it">Tap the pencil to set times, strikes, the bowl sound, and the starting bell.</div>
+    </div>
     </div>
     <button class="info-close" id="infoClose">Got it</button>
   </div>
