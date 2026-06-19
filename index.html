@@ -84,35 +84,17 @@
   .pip.active{background:var(--brass-hi);transform:scale(1.35);}
   .pip.done{background:var(--mist-dim);}
 
-  .controls{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;width:100%;
-    min-height:120px;}  /* fixed height so the bowl doesn't shift between idle/running */
-  .primary{appearance:none;border:none;cursor:pointer;
-    background:linear-gradient(180deg,var(--brass-hi),var(--brass));
-    color:#241c0c;font-size:1.05rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-    padding:16px 56px;border-radius:999px;box-shadow:0 8px 30px rgba(200,164,92,.28);
-    transition:transform .15s ease, box-shadow .3s ease;}
-  .primary:active{transform:scale(.96);}
-  .secondary{display:flex;gap:14px;}
-  .ghost{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
-    color:var(--mist);font-size:.82rem;letter-spacing:.08em;padding:11px 22px;border-radius:999px;
-    transition:border-color .2s,color .2s;}
-  .ghost:active{border-color:var(--brass);color:var(--brass-hi);}
-
-  /* in-session transport: Stop + Pause/Play, icon buttons */
+  .controls{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;
+    min-height:100px;}
   .hidden{display:none !important;}
-  .transport{display:flex;align-items:center;gap:26px;}
+  /* a row of two matched icon buttons: Adjust+Start when idle, Stop+Pause when running */
+  .transport{display:flex;align-items:center;gap:28px;}
+  /* every transport button is identical: same size, outlined circle, white icon on the background */
   .tbtn{appearance:none;cursor:pointer;display:grid;place-items:center;border-radius:50%;
-    transition:transform .15s ease, box-shadow .3s ease, border-color .2s;}
-  .tbtn:active{transform:scale(.94);}
-  .tbtn svg{display:block;}
-  .tbtn.main{width:86px;height:86px;border:none;
-    background:linear-gradient(180deg,var(--brass-hi),var(--brass));
-    box-shadow:0 8px 30px rgba(200,164,92,.28);}
-  .tbtn.main svg{fill:#241c0c;}
-  .tbtn.stop{width:64px;height:64px;background:transparent;border:1px solid var(--line);}
-  .tbtn.stop svg{fill:var(--mist);}
-  .tbtn.stop:active{border-color:var(--ember);}
-  .tbtn.stop:active svg{fill:var(--ember);}
+    color:#efe9dc;width:80px;height:80px;background:transparent;border:2px solid currentColor;opacity:.9;
+    transition:transform .15s ease, opacity .2s;}
+  .tbtn:active{transform:scale(.94);opacity:1;}
+  .tbtn svg{display:block;fill:currentColor;}
 
   /* settings sheet */
   .scrim{position:fixed;inset:0;z-index:5;background:rgba(8,7,12,.6);backdrop-filter:blur(3px);
@@ -185,6 +167,19 @@
     color:var(--mist-dim);opacity:0;transition:opacity .4s ease;pointer-events:none;}
   .note.show{opacity:1;pointer-events:auto;}
 
+  /* phone turned sideways: shrink the gaps, size the bowl to the height, and pin the
+     two visible buttons to the bottom corners so they never crowd the circle (and never
+     run off the page). Stop/Adjust go bottom-left, Start/Pause go bottom-right. */
+  @media (orientation: landscape) and (max-height: 600px){
+    .wrap{gap:clamp(3px,1vh,10px);padding:clamp(4px,1.5vh,10px) 16px;}
+    .bowl{width:min(64vh,300px);}
+    .controls{min-height:0;}
+    #toggleBtn,#primary{position:fixed;z-index:4;
+      bottom:calc(env(safe-area-inset-bottom) + 14px);right:calc(env(safe-area-inset-right) + 18px);}
+    #stopBtn,#adjust{position:fixed;z-index:4;
+      bottom:calc(env(safe-area-inset-bottom) + 14px);left:calc(env(safe-area-inset-left) + 18px);}
+  }
+
   @media (prefers-reduced-motion: reduce){
     .running .breather{animation:none;}
     .ripple.go{animation:none;}
@@ -221,13 +216,13 @@
   </div>
 
   <div class="controls">
-    <button class="primary" id="primary">Begin</button>
     <div class="transport hidden" id="transport">
-      <button class="tbtn stop" id="stopBtn" aria-label="Stop"></button>
-      <button class="tbtn main" id="toggleBtn" aria-label="Pause"></button>
+      <button class="tbtn" id="stopBtn" aria-label="Stop"></button>
+      <button class="tbtn" id="toggleBtn" aria-label="Pause"></button>
     </div>
-    <div class="secondary" id="secondary">
-      <button class="ghost" id="adjust">Adjust</button>
+    <div class="transport" id="idlebar">
+      <button class="tbtn" id="adjust" aria-label="Adjust"></button>
+      <button class="tbtn" id="primary" aria-label="Begin"></button>
     </div>
   </div>
 </div>
@@ -398,22 +393,25 @@ function strike(preset, t){
     });
   });
 }
+// Resolve once the AudioContext is genuinely running. On the very first gesture iOS
+// creates it suspended; scheduling before resume() finishes makes the first strike
+// silent — so we always wait for the resume promise before scheduling.
+function audioReady(){
+  ensureAudio();
+  return (audio.state==="suspended") ? audio.resume().catch(()=>{}) : Promise.resolve();
+}
 // schedule `count` strikes; fire a visual ripple in sync with each
 function ringBowl(presetKey, count){
   if(count<=0) return;
-  ensureAudio();
-  const fire = ()=>{
+  audioReady().then(()=>{
     const preset = PRESETS[presetKey];
-    const t0 = audio.currentTime + 0.06;
+    const t0 = audio.currentTime + 0.08;
     for(let i=0;i<count;i++){
       const t = t0 + i*preset.gap;
       strike(preset, t);
       setTimeout(showRipple, Math.max(0,(t-audio.currentTime))*1000);
     }
-  };
-  // wait for the context to actually be running, or the first strike can be silent
-  if(audio.state==="suspended"){ audio.resume().then(fire).catch(fire); }
-  else fire();
+  });
 }
 function showRipple(){
   rippleEl.classList.remove("go"); void rippleEl.offsetWidth; rippleEl.classList.add("go");
@@ -424,7 +422,7 @@ const $ = s=>document.querySelector(s);
 const eyebrow=$("#eyebrow"), timeEl=$("#time"), subEl=$("#sub"), progEl=$("#prog");
 const bowlEl=$("#bowl"), rippleEl=$("#ripple"), glow=$("#glow"), pipsEl=$("#pips");
 const primary=$("#primary"), adjustBtn=$("#adjust");
-const transport=$("#transport"), toggleBtn=$("#toggleBtn"), stopBtn=$("#stopBtn"), secondary=$("#secondary");
+const transport=$("#transport"), toggleBtn=$("#toggleBtn"), stopBtn=$("#stopBtn"), idlebar=$("#idlebar");
 const sheet=$("#sheet"), scrim=$("#scrim");
 const noteEl=$("#note");
 const CIRC = 2*Math.PI*92;
@@ -432,16 +430,19 @@ progEl.setAttribute("stroke-dasharray", CIRC.toFixed(2));
 
 /* transport icons (inline SVG so they don't depend on any font) */
 const ICON_PLAY  = '<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>';
-const ICON_PAUSE = '<svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>';
-const ICON_STOP  = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.4"/></svg>';
-stopBtn.innerHTML = ICON_STOP;
+const ICON_PAUSE = '<svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>';
+const ICON_STOP  = '<svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.4"/></svg>';
+const ICON_PENCIL= '<svg width="29" height="29" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83a1 1 0 0 0 0-.03z"/></svg>';
+stopBtn.innerHTML  = ICON_STOP;
+toggleBtn.innerHTML= ICON_PAUSE;
+primary.innerHTML  = ICON_PLAY;     // Begin / Begin again = play icon
+adjustBtn.innerHTML= ICON_PENCIL;   // Adjust = pencil icon
 
 /* show the right controls for the current state */
 function setMode(mode){               // idle | running | paused | done
   const inSession = (mode==="running" || mode==="paused");
-  primary.classList.toggle("hidden", inSession);
-  transport.classList.toggle("hidden", !inSession);
-  secondary.classList.toggle("hidden", inSession);   // hide Adjust during a session
+  transport.classList.toggle("hidden", !inSession);   // Stop + Pause
+  idlebar.classList.toggle("hidden", inSession);       // Adjust + Start
   if(mode==="running"){ toggleBtn.innerHTML=ICON_PAUSE; toggleBtn.setAttribute("aria-label","Pause"); }
   if(mode==="paused"){  toggleBtn.innerHTML=ICON_PLAY;  toggleBtn.setAttribute("aria-label","Play"); }
 }
@@ -483,7 +484,7 @@ function renderIdle(){
   progEl.style.stroke="var(--brass)";
   setGlow("#8f8ad0");
   [...pipsEl.children].forEach(p=>p.className="pip");
-  primary.textContent="Begin";
+  primary.setAttribute("aria-label","Begin");
   setMode("idle");
 }
 
@@ -554,7 +555,7 @@ function finish(){
   timeEl.classList.add("msg"); timeEl.textContent="Complete";
   subEl.textContent="rest a moment";
   [...pipsEl.children].forEach(p=>p.className="pip done");
-  primary.textContent="Begin again";
+  primary.setAttribute("aria-label","Begin again");
   setMode("done");
   // after a short ease-out, release the screen so the phone can auto-lock (no blackout)
   clearTimeout(graceTimer);
@@ -583,8 +584,6 @@ document.addEventListener("visibilitychange",()=>{
 /* ---------- controls ---------- */
 primary.addEventListener("click",()=>{
   if(state==="idle"||state==="done") begin();
-  else if(state==="running") pause();
-  else if(state==="paused") resume();
 });
 toggleBtn.addEventListener("click",()=>{
   if(state==="running") pause();
