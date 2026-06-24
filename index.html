@@ -73,7 +73,7 @@
   .ripple{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;border:2px solid var(--cool);
     opacity:0;pointer-events:none;}
   .ripple.go{animation:ripple 2.6s ease-out;}
-  @keyframes ripple{0%{transform:scale(.7);opacity:.7;}100%{transform:scale(1.7);opacity:0;}}
+  @keyframes ripple{0%{transform:scale(.5);opacity:.7;}100%{transform:scale(1.4);opacity:0;}}
 
   .time{position:relative;z-index:2;font-variant-numeric:tabular-nums;
     font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -417,7 +417,7 @@ const DEFAULTS = {
   settle:60, meditate:1200, return:240,   // 1:00 settle / 20:00 meditate / 4:00 return
   sound:"tibetan",
   startBell:true,                         // soft chime when you press Begin
-  bells:{settle:1, meditate:3, return:3}  // strikes at the end of each stage
+  bells:{settle:3, meditate:3, return:3}  // strikes at the end of each stage
 };
 const clone = o => JSON.parse(JSON.stringify(o));
 function loadCfg(){
@@ -446,10 +446,12 @@ function loadCfg(){
       c.bells.meditate = DEFAULTS.bells.meditate;
       c.bells.return = DEFAULTS.bells.return;
     }
+    // v5: settle-in strikes now default to 3 (a clear "meditation begins" cue)
+    if(!(p.v>=5)) c.bells.settle = DEFAULTS.bells.settle;
     return c;
   }catch(e){ return clone(DEFAULTS); }
 }
-function saveCfg(){ store.set("bowlCfg", JSON.stringify({v:4, ...cfg})); }
+function saveCfg(){ store.set("bowlCfg", JSON.stringify({v:5, ...cfg})); }
 const clampSec  = s => Math.max(0, Math.min(60*120, Math.round(s)));
 const clampBell = n => Math.max(0, Math.min(8, Math.round(n)));
 // cfg is loaded further down, AFTER PRESETS exists (loadCfg references it)
