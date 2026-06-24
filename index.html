@@ -193,7 +193,8 @@
   .isteps{margin:10px 0 0;padding-left:1.25em;color:var(--mist);font-size:.87rem;line-height:1.5;}
   .isteps li{margin-bottom:7px;}
   .isteps b{color:#efe9dc;}
-  .shareicon{display:inline-block;width:1.4em;height:1.4em;vertical-align:-.32em;fill:var(--brass-hi);}
+  .ihint{margin-top:11px;color:var(--mist-dim);font-size:.77rem;line-height:1.45;}
+  .shareicon{display:inline-block;width:1.45em;height:1.45em;vertical-align:-.34em;fill:var(--brass-hi);}
   .install-actions{display:flex;flex-direction:column;gap:9px;margin-top:clamp(14px,2.6vh,22px);}
   .install-actions .info-close{margin-top:0;}
   .install-ghost{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
@@ -804,9 +805,10 @@ renderIdle();
     } else if(v==="ios"){
       titleEl.textContent="Add TM Bowl to your home screen";
       bodyEl.innerHTML="<div class='it'>For the full app, working offline, with its own icon:</div>"+
-        "<ol class='isteps'><li>Tap the Share button "+SHARE+"</li>"+
+        "<ol class='isteps'><li>Tap the Share icon "+SHARE+"</li>"+
         "<li>Choose <b>Add to Home Screen</b></li>"+
-        "<li>Tap <b>Add</b></li></ol>";
+        "<li>Tap <b>Add</b></li></ol>"+
+        "<div class='ihint'>No Share icon? Tap the bottom or top edge of the screen to bring up Safari’s toolbar, then tap "+SHARE+".</div>";
       dismissBtn.textContent="Got it";
     } else if(v==="android-manual"){
       titleEl.textContent="Add TM Bowl to your home screen";
