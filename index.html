@@ -189,6 +189,16 @@
   .info-card .ih{color:var(--brass-hi);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:3px;}
   .info-card .it{color:var(--mist);font-size:.87rem;line-height:1.48;}
   .info-card a{color:var(--brass-hi);word-break:break-word;}
+  /* install helper: numbered steps, share glyph, action buttons */
+  .isteps{margin:10px 0 0;padding-left:1.25em;color:var(--mist);font-size:.87rem;line-height:1.5;}
+  .isteps li{margin-bottom:7px;}
+  .isteps b{color:#efe9dc;}
+  .shareicon{display:inline-block;width:1.4em;height:1.4em;vertical-align:-.32em;fill:var(--brass-hi);}
+  .install-actions{display:flex;flex-direction:column;gap:9px;margin-top:clamp(14px,2.6vh,22px);}
+  .install-actions .info-close{margin-top:0;}
+  .install-ghost{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
+    color:var(--mist);font-size:.85rem;letter-spacing:.04em;padding:11px;border-radius:12px;}
+  .install-ghost:active{border-color:var(--brass);color:var(--brass-hi);}
   .info-close{width:100%;appearance:none;border:none;cursor:pointer;margin-top:clamp(10px,2.4vh,20px);
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:13px;border-radius:14px;font-size:.9rem;}
@@ -296,6 +306,19 @@
     </div>
     </div>
     <button class="info-close" id="infoClose">Got it</button>
+  </div>
+</div>
+
+<!-- Install helper -->
+<div class="info-scrim" id="installScrim">
+  <div class="info-card" id="installCard">
+    <h2 id="installTitle"></h2>
+    <div id="installBody"></div>
+    <div class="install-actions">
+      <button class="info-close" id="installAction" hidden></button>
+      <button class="install-ghost" id="installCopy" hidden></button>
+      <button class="install-ghost" id="installDismiss"></button>
+    </div>
   </div>
 </div>
 
@@ -749,6 +772,67 @@ Object.entries(PRESETS).forEach(([key,p])=>{
 /* ---------- init ---------- */
 refreshSettingsUI();
 renderIdle();
+
+/* ---------- install helper: shows the easiest path to the home screen per device ---------- */
+(function(){
+  const scrim=$("#installScrim"),
+        titleEl=$("#installTitle"), bodyEl=$("#installBody"),
+        actionBtn=$("#installAction"), copyBtn=$("#installCopy"), dismissBtn=$("#installDismiss");
+  if(!scrim) return;
+  const ua=navigator.userAgent||"";
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  const isAndroid=/android/i.test(ua);
+  // in-app browsers (WhatsApp/IG/FB/etc.) can't add to the home screen at all
+  const inApp=/FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|WhatsApp|Snapchat|Pinterest|LinkedInApp|GSA\/|MicroMessenger|TikTok/i.test(ua);
+  // on iOS only Safari can install; Chrome/Firefox/Edge for iOS cannot
+  const iosOther = isIOS && /CriOS|FxiOS|EdgiOS/i.test(ua);
+  const SHARE="<svg class='shareicon' viewBox='0 0 24 24' aria-hidden='true'><path d='M12 2.6l3.6 3.6-1.42 1.42L13 6.43V14.5h-2V6.43L9.82 7.62 8.4 6.2 12 2.6z'/><path d='M5.5 9.5H9v2H7.5v7.5h9V11.5H15v-2h3.5a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-9.5a1 1 0 0 1 1-1z'/></svg>";
+  let deferredPrompt=null, shown=false;
+
+  const dismissed=()=>{ try{return sessionStorage.getItem("instDismiss")==="1";}catch(e){return false;} };
+  const setDismissed=()=>{ try{sessionStorage.setItem("instDismiss","1");}catch(e){} };
+  const open=()=>{ scrim.classList.add("open"); shown=true; };
+  const close=()=>{ scrim.classList.remove("open"); };
+
+  function render(v){
+    actionBtn.hidden=true; copyBtn.hidden=true;
+    if(v==="android"){
+      titleEl.textContent="Install TM Bowl";
+      bodyEl.innerHTML="<div class='it'>Add it to your home screen for one-tap, full-screen, offline use.</div>";
+      actionBtn.hidden=false; actionBtn.textContent="Add to Home Screen"; dismissBtn.textContent="Not now";
+    } else if(v==="ios"){
+      titleEl.textContent="Add TM Bowl to your home screen";
+      bodyEl.innerHTML="<div class='it'>For the full app — full-screen, offline, with its own icon:</div>"+
+        "<ol class='isteps'><li>Tap the Share button "+SHARE+" at the bottom of Safari</li>"+
+        "<li>Scroll down and tap <b>Add to Home Screen</b></li><li>Tap <b>Add</b></li></ol>";
+      dismissBtn.textContent="Got it";
+    } else if(v==="android-manual"){
+      titleEl.textContent="Add TM Bowl to your home screen";
+      bodyEl.innerHTML="<div class='it'>In Chrome:</div><ol class='isteps'><li>Tap the menu <b>⋮</b> (top-right)</li><li>Tap <b>Install app</b> (or <b>Add to Home screen</b>)</li></ol>";
+      dismissBtn.textContent="Got it";
+    } else {
+      const br=isIOS?"Safari":"Chrome";
+      titleEl.textContent="Open in "+br+" to install";
+      bodyEl.innerHTML="<div class='it'>You’re viewing this inside another app, which can’t add it to your home screen. Open it in "+br+" first:</div>"+
+        "<ol class='isteps'><li>Tap the menu (⋯ or Share)</li><li>Choose <b>Open in "+br+"</b></li><li>Then add it to your home screen</li></ol>"+
+        "<div class='it'>… or copy the link and paste it into "+br+".</div>";
+      copyBtn.hidden=false; copyBtn.textContent="Copy link"; dismissBtn.textContent="OK";
+    }
+  }
+  const decide=()=> (inApp||iosOther) ? "redirect" : isIOS ? "ios" : isAndroid ? (deferredPrompt?"android":"android-manual") : (deferredPrompt?"android":null);
+  function autoShow(){ if(standalone||shown||dismissed()) return; const v=decide(); if(v){ render(v); open(); } }
+
+  window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; });
+  window.addEventListener("appinstalled", ()=>{ deferredPrompt=null; close(); });
+
+  actionBtn.addEventListener("click", ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; close(); }); });
+  copyBtn.addEventListener("click", ()=>{ navigator.clipboard.writeText(location.href).then(()=>{ copyBtn.textContent="Copied!"; setTimeout(()=>copyBtn.textContent="Copy link",1600); }).catch(()=>{ copyBtn.textContent="Copy failed"; }); });
+  dismissBtn.addEventListener("click", ()=>{ setDismissed(); close(); });
+  scrim.addEventListener("click", e=>{ if(e.target===scrim){ setDismissed(); close(); } });
+
+  if(!standalone) window.addEventListener("load", ()=> setTimeout(autoShow, 1400));
+})();
 
 /* ---------- service worker (offline / installable) ---------- */
 if("serviceWorker" in navigator){
