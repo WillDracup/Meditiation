@@ -803,9 +803,10 @@ renderIdle();
       actionBtn.hidden=false; actionBtn.textContent="Add to Home Screen"; dismissBtn.textContent="Not now";
     } else if(v==="ios"){
       titleEl.textContent="Add TM Bowl to your home screen";
-      bodyEl.innerHTML="<div class='it'>For the full app — full-screen, offline, with its own icon:</div>"+
-        "<ol class='isteps'><li>Tap the Share button "+SHARE+" at the bottom of Safari</li>"+
-        "<li>Scroll down and tap <b>Add to Home Screen</b></li><li>Tap <b>Add</b></li></ol>";
+      bodyEl.innerHTML="<div class='it'>For the full app, working offline, with its own icon:</div>"+
+        "<ol class='isteps'><li>Tap the Share button "+SHARE+"</li>"+
+        "<li>Choose <b>Add to Home Screen</b></li>"+
+        "<li>Tap <b>Add</b></li></ol>";
       dismissBtn.textContent="Got it";
     } else if(v==="android-manual"){
       titleEl.textContent="Add TM Bowl to your home screen";
