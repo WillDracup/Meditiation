@@ -157,9 +157,14 @@
   .chip.sel{border-color:var(--brass);background:#2a2436;}
   .chip .cn{color:#e7e2f0;font-size:.98rem;}
   .chip .cd{color:var(--mist-dim);font-size:.72rem;}
-  .done-btn{width:100%;appearance:none;border:none;cursor:pointer;margin-top:auto;
+  .done-btn{width:100%;appearance:none;border:none;cursor:pointer;margin-top:10px;
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:15px;border-radius:14px;font-size:.92rem;}
+  /* TEMP testing button — dashed so it reads as a dev/throwaway control. Remove when done testing. */
+  .test-btn{width:100%;appearance:none;cursor:pointer;margin-top:auto;
+    background:transparent;border:1px dashed var(--mist-dim);color:var(--mist);
+    font-size:.82rem;letter-spacing:.04em;padding:12px;border-radius:12px;}
+  .test-btn:active{border-color:var(--brass);color:var(--brass-hi);}
 
   /* brief reminder that drops in just under the stage label (e.g. volume check on Begin).
      Absolutely positioned so it overlays the gap and never nudges the bowl. */
@@ -395,6 +400,8 @@
     </div>
   </div>
 
+  <!-- TEMP testing button: resets the install prompt's "don't show again" and shows it. Remove when done. -->
+  <button class="test-btn" id="resetInstall">↺ Show the install prompt again (testing)</button>
   <button class="done-btn" id="done">Done</button>
 </div>
 
@@ -714,6 +721,7 @@ function closeSheet(){ sheet.classList.remove("open"); scrim.classList.remove("o
 adjustBtn.addEventListener("click",()=>{ ensureAudio(); openSheet(); });
 scrim.addEventListener("click",closeSheet);
 $("#done").addEventListener("click",closeSheet);
+$("#resetInstall").addEventListener("click",()=>{ closeSheet(); if(window.TMInstall){ TMInstall.reset(); TMInstall.show(); } });
 
 /* ---------- "how it works" dialog ---------- */
 const infoScrim=$("#infoScrim");
@@ -851,6 +859,10 @@ renderIdle();
   scrim.addEventListener("click", e=>{ if(e.target===scrim) dismiss(); });
 
   if(!standalone) window.addEventListener("load", ()=> setTimeout(autoShow, 1400));
+
+  // small API so a testing button can re-show the prompt / clear the "don't show again" flag
+  window.TMInstall={ show(){ const v=decide()||"ios"; render(v); open(); },
+                     reset(){ try{ localStorage.removeItem("instNever"); }catch(e){} } };
 })();
 
 /* ---------- service worker (offline / installable) ---------- */
