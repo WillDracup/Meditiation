@@ -55,8 +55,9 @@
   .wrap{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:clamp(20px,5vh,46px);width:100%;max-width:520px;margin:0 auto;padding:24px;}
 
-  /* big stage labels, scaled to the time numbers (capped so MEDITATION stays one line) */
-  .eyebrow{font-size:clamp(2.4rem,15vw,3.6rem);letter-spacing:.01em;text-transform:uppercase;color:var(--mist-dim);
+  /* big stage labels — same rounded font as the timer / "Complete", title case, sized to the time numbers */
+  .eyebrow{font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:clamp(3.4rem,17vw,5rem);letter-spacing:-.01em;color:var(--mist-dim);
     font-weight:500;line-height:1;min-height:1em;white-space:nowrap;transition:color .8s ease;}
 
   /* breathing bowl ring */
@@ -590,7 +591,8 @@ function renderIdle(){
   eyebrow.style.color="";                 // default (purple-grey) for the title
   timeEl.textContent=fmt(total); subEl.textContent="total";
   progEl.style.strokeDashoffset=CIRC;
-  progEl.style.stroke="var(--cool)";      // ring is always purple
+  progEl.style.stroke="var(--cool)";      // idle ring is purple
+  progEl.style.filter="";                 // default purple glow
   setGlow("#8f8ad0");
   [...pipsEl.children].forEach(p=>p.className="pip");
   primary.setAttribute("aria-label","Begin");
@@ -600,11 +602,12 @@ function renderIdle(){
 function startStage(i){
   stageIdx=i;
   const st=STAGES[i];
-  progEl.style.stroke="var(--cool)";       // ring stays purple every stage
-  setGlow("#8f8ad0");                       // glow stays purple every stage
+  const warm = st.key==="meditate";        // meditation is the "special" warm phase
+  progEl.style.stroke = warm ? "var(--warm)" : "var(--cool)";
+  progEl.style.filter = warm ? "drop-shadow(0 0 6px rgba(200,164,92,.5))" : "";
+  setGlow(warm ? "#c8a45c" : "#8f8ad0");
   eyebrow.textContent=st.label;
-  // only the Meditation label takes the warm "special" colour; the rest stay purple
-  eyebrow.style.color = st.key==="meditate" ? "var(--warm)" : "";
+  eyebrow.style.color = warm ? "var(--warm)" : "";   // label matches the ring
   subEl.textContent="remaining";
   [...pipsEl.children].forEach((p,idx)=>{
     p.className="pip"+(idx<i?" done":idx===i?" active":"");
@@ -667,7 +670,7 @@ function finish(){
   progEl.style.strokeDashoffset=0;
   eyebrow.textContent="";                 // let the centre carry the message
   timeEl.classList.add("msg"); timeEl.textContent="Complete";
-  subEl.textContent="rest a moment";
+  subEl.textContent="";
   [...pipsEl.children].forEach(p=>p.className="pip done");
   primary.setAttribute("aria-label","Begin again");
   setMode("done");
