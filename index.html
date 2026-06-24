@@ -55,20 +55,21 @@
   .wrap{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:clamp(20px,5vh,46px);width:100%;max-width:520px;margin:0 auto;padding:24px;}
 
-  .eyebrow{font-size:.82rem;letter-spacing:.32em;text-transform:uppercase;color:var(--mist-dim);
-    font-weight:500;min-height:1.1em;transition:color .8s ease;}
+  /* big stage labels, scaled to the time numbers (capped so MEDITATION stays one line) */
+  .eyebrow{font-size:clamp(2.4rem,15vw,3.6rem);letter-spacing:.01em;text-transform:uppercase;color:var(--mist-dim);
+    font-weight:500;line-height:1;min-height:1em;white-space:nowrap;transition:color .8s ease;}
 
   /* breathing bowl ring */
   .bowl{position:relative;width:min(74vw,300px);aspect-ratio:1;display:grid;place-items:center;}
   .bowl svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);}
   .bowl .track{fill:none;stroke:var(--line);stroke-width:3;}
-  .bowl .prog{fill:none;stroke:var(--brass);stroke-width:5;stroke-linecap:round;
-    transition:stroke .8s ease;filter:drop-shadow(0 0 6px rgba(200,164,92,.45));}
+  .bowl .prog{fill:none;stroke:var(--cool);stroke-width:5;stroke-linecap:round;
+    transition:stroke .8s ease;filter:drop-shadow(0 0 6px rgba(143,138,208,.5));}
   .breather{position:absolute;width:78%;aspect-ratio:1;border-radius:50%;
-    background:radial-gradient(circle at 50% 45%, rgba(232,201,135,.10), transparent 68%);}
+    background:radial-gradient(circle at 50% 45%, rgba(143,138,208,.14), transparent 68%);}
   .running .breather{animation:breathe 10s ease-in-out infinite;}
   @keyframes breathe{0%,100%{transform:scale(.92);opacity:.55;}45%{transform:scale(1.06);opacity:1;}}
-  .ripple{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;border:2px solid var(--brass-hi);
+  .ripple{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;border:2px solid var(--cool);
     opacity:0;pointer-events:none;}
   .ripple.go{animation:ripple 2.6s ease-out;}
   @keyframes ripple{0%{transform:scale(.7);opacity:.7;}100%{transform:scale(1.7);opacity:0;}}
@@ -81,7 +82,7 @@
 
   .pips{display:flex;gap:12px;}
   .pip{width:8px;height:8px;border-radius:50%;background:var(--line);transition:background .5s,transform .5s;}
-  .pip.active{background:var(--brass-hi);transform:scale(1.35);}
+  .pip.active{background:var(--cool);transform:scale(1.35);}
   .pip.done{background:var(--mist-dim);}
 
   .controls{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;
@@ -200,6 +201,8 @@
   .install-ghost{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);
     color:var(--mist);font-size:.85rem;letter-spacing:.04em;padding:11px;border-radius:12px;}
   .install-ghost:active{border-color:var(--brass);color:var(--brass-hi);}
+  .install-never{display:flex;align-items:center;gap:9px;margin-top:14px;color:var(--mist-dim);font-size:.82rem;cursor:pointer;}
+  .install-never input{width:18px;height:18px;accent-color:var(--brass);flex:none;}
   .info-close{width:100%;appearance:none;border:none;cursor:pointer;margin-top:clamp(10px,2.4vh,20px);
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:13px;border-radius:14px;font-size:.9rem;}
@@ -209,7 +212,8 @@
      run off the page). Stop/Adjust go bottom-left, Start/Pause go bottom-right. */
   @media (orientation: landscape) and (max-height: 600px){
     .wrap{gap:clamp(3px,1vh,10px);padding:clamp(4px,1.5vh,10px) 16px;}
-    .bowl{width:min(64vh,300px);}
+    .eyebrow{font-size:clamp(1.5rem,7vh,2.4rem);}
+    .bowl{width:min(62vh,300px);}
     .controls{min-height:0;}
     #toggleBtn,#primary{position:fixed;z-index:4;
       bottom:calc(env(safe-area-inset-bottom) + 14px);right:calc(env(safe-area-inset-right) + 18px);}
@@ -315,6 +319,7 @@
   <div class="info-card" id="installCard">
     <h2 id="installTitle"></h2>
     <div id="installBody"></div>
+    <label class="install-never"><input type="checkbox" id="installNever"> Don’t show this again</label>
     <div class="install-actions">
       <button class="info-close" id="installAction" hidden></button>
       <button class="install-ghost" id="installCopy" hidden></button>
@@ -582,9 +587,10 @@ function renderIdle(){
   bowlEl.classList.remove("finished");
   timeEl.classList.remove("msg");
   eyebrow.innerHTML="TM Bowl";
+  eyebrow.style.color="";                 // default (purple-grey) for the title
   timeEl.textContent=fmt(total); subEl.textContent="total";
   progEl.style.strokeDashoffset=CIRC;
-  progEl.style.stroke="var(--brass)";
+  progEl.style.stroke="var(--cool)";      // ring is always purple
   setGlow("#8f8ad0");
   [...pipsEl.children].forEach(p=>p.className="pip");
   primary.setAttribute("aria-label","Begin");
@@ -594,9 +600,12 @@ function renderIdle(){
 function startStage(i){
   stageIdx=i;
   const st=STAGES[i];
-  progEl.style.stroke=st.color;
-  setGlow(st.glow);
-  eyebrow.textContent=st.label; subEl.textContent="remaining";
+  progEl.style.stroke="var(--cool)";       // ring stays purple every stage
+  setGlow("#8f8ad0");                       // glow stays purple every stage
+  eyebrow.textContent=st.label;
+  // only the Meditation label takes the warm "special" colour; the rest stay purple
+  eyebrow.style.color = st.key==="meditate" ? "var(--warm)" : "";
+  subEl.textContent="remaining";
   [...pipsEl.children].forEach((p,idx)=>{
     p.className="pip"+(idx<i?" done":idx===i?" active":"");
   });
@@ -789,12 +798,16 @@ renderIdle();
   // on iOS only Safari can install; Chrome/Firefox/Edge for iOS cannot
   const iosOther = isIOS && /CriOS|FxiOS|EdgiOS/i.test(ua);
   const SHARE="<svg class='shareicon' viewBox='0 0 24 24' aria-hidden='true'><path d='M12 2.6l3.6 3.6-1.42 1.42L13 6.43V14.5h-2V6.43L9.82 7.62 8.4 6.2 12 2.6z'/><path d='M5.5 9.5H9v2H7.5v7.5h9V11.5H15v-2h3.5a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-9.5a1 1 0 0 1 1-1z'/></svg>";
+  const DOTS="<svg class='shareicon' viewBox='0 0 24 24' aria-hidden='true'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>";
+  const neverEl=$("#installNever");
   let deferredPrompt=null, shown=false;
 
-  const dismissed=()=>{ try{return sessionStorage.getItem("instDismiss")==="1";}catch(e){return false;} };
-  const setDismissed=()=>{ try{sessionStorage.setItem("instDismiss","1");}catch(e){} };
+  // shows on every browser launch until the user ticks "Don't show this again"
+  const never=()=>{ try{return localStorage.getItem("instNever")==="1";}catch(e){return false;} };
+  const setNever=()=>{ try{localStorage.setItem("instNever","1");}catch(e){} };
   const open=()=>{ scrim.classList.add("open"); shown=true; };
   const close=()=>{ scrim.classList.remove("open"); };
+  const dismiss=()=>{ if(neverEl && neverEl.checked) setNever(); close(); };
 
   function render(v){
     actionBtn.hidden=true; copyBtn.hidden=true;
@@ -805,10 +818,10 @@ renderIdle();
     } else if(v==="ios"){
       titleEl.textContent="Add TM Bowl to your home screen";
       bodyEl.innerHTML="<div class='it'>For the full app, working offline, with its own icon:</div>"+
-        "<ol class='isteps'><li>Tap the ••• menu or Share icon "+SHARE+"</li>"+
+        "<ol class='isteps'><li>If you see a Share icon "+SHARE+", tap it — if not, tap "+DOTS+" to reach it</li>"+
         "<li>Scroll down to <b>Add to Home Screen</b></li>"+
         "<li>Tap <b>Add</b></li></ol>"+
-        "<div class='ihint'>The ••• and Share icon are in Safari’s bottom bar. In the ••• menu, you may need to tap Share first.</div>";
+        "<div class='ihint'>The "+DOTS+" and Share icon "+SHARE+" are in Safari’s bottom bar.</div>";
       dismissBtn.textContent="Got it";
     } else if(v==="android-manual"){
       titleEl.textContent="Add TM Bowl to your home screen";
@@ -824,15 +837,15 @@ renderIdle();
     }
   }
   const decide=()=> (inApp||iosOther) ? "redirect" : isIOS ? "ios" : isAndroid ? (deferredPrompt?"android":"android-manual") : (deferredPrompt?"android":null);
-  function autoShow(){ if(standalone||shown||dismissed()) return; const v=decide(); if(v){ render(v); open(); } }
+  function autoShow(){ if(standalone||shown||never()) return; const v=decide(); if(v){ render(v); open(); } }
 
   window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; });
   window.addEventListener("appinstalled", ()=>{ deferredPrompt=null; close(); });
 
-  actionBtn.addEventListener("click", ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; close(); }); });
+  actionBtn.addEventListener("click", ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; dismiss(); }); });
   copyBtn.addEventListener("click", ()=>{ navigator.clipboard.writeText(location.href).then(()=>{ copyBtn.textContent="Copied!"; setTimeout(()=>copyBtn.textContent="Copy link",1600); }).catch(()=>{ copyBtn.textContent="Copy failed"; }); });
-  dismissBtn.addEventListener("click", ()=>{ setDismissed(); close(); });
-  scrim.addEventListener("click", e=>{ if(e.target===scrim){ setDismissed(); close(); } });
+  dismissBtn.addEventListener("click", dismiss);
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) dismiss(); });
 
   if(!standalone) window.addEventListener("load", ()=> setTimeout(autoShow, 1400));
 })();
