@@ -24,9 +24,8 @@
     --mist-dim:#7d7790;
     --brass:#c8a45c;
     --brass-hi:#e8c987;
-    --cool:#8f8ad0;     /* settle in */
-    --ember:#d98a5b;    /* return */
-    --warm:#c8a45c;     /* meditation */
+    --cool:#8f8ad0;     /* the purple used everywhere except… */
+    --warm:#c8a45c;     /* …the Meditation stage (same value as --brass) */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
@@ -112,7 +111,6 @@
   .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 18px;}
   .sheet h2{font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;font-weight:600;color:#efe9dc;
     font-size:1.3rem;letter-spacing:-.01em;margin-bottom:22px;}
-  .sheet .lead{color:var(--mist-dim);font-size:.85rem;margin-bottom:22px;}
   .group{margin-bottom:20px;}
   .group > .glabel{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
     color:var(--mist-dim);margin-bottom:10px;}
@@ -156,15 +154,9 @@
     padding:15px 14px;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .2s;}
   .chip.sel{border-color:var(--brass);background:#2a2436;}
   .chip .cn{color:#e7e2f0;font-size:.98rem;}
-  .chip .cd{color:var(--mist-dim);font-size:.72rem;}
-  .done-btn{width:100%;appearance:none;border:none;cursor:pointer;margin-top:10px;
+  .done-btn{width:100%;appearance:none;border:none;cursor:pointer;margin-top:auto;
     background:linear-gradient(180deg,var(--brass-hi),var(--brass));color:#241c0c;font-weight:600;
     letter-spacing:.1em;text-transform:uppercase;padding:15px;border-radius:14px;font-size:.92rem;}
-  /* TEMP testing button — dashed so it reads as a dev/throwaway control. Remove when done testing. */
-  .test-btn{width:100%;appearance:none;cursor:pointer;margin-top:auto;
-    background:transparent;border:1px dashed var(--mist-dim);color:var(--mist);
-    font-size:.82rem;letter-spacing:.04em;padding:12px;border-radius:12px;}
-  .test-btn:active{border-color:var(--brass);color:var(--brass-hi);}
 
   /* brief reminder that drops in just under the stage label (e.g. volume check on Begin).
      Absolutely positioned so it overlays the gap and never nudges the bowl. */
@@ -252,7 +244,7 @@
 
 <div class="wrap">
   <div class="head">
-    <div class="eyebrow" id="eyebrow">Meditation</div>
+    <div class="eyebrow" id="eyebrow">TM Bowl</div>
     <div class="note" id="note"></div>
   </div>
 
@@ -400,8 +392,6 @@
     </div>
   </div>
 
-  <!-- TEMP testing button: resets the install prompt's "don't show again" and shows it. Remove when done. -->
-  <button class="test-btn" id="resetInstall">↺ Show the install prompt again (testing)</button>
   <button class="done-btn" id="done">Done</button>
 </div>
 
@@ -569,9 +559,9 @@ function setMode(mode){               // idle | running | paused | done
 }
 
 const STAGES=[
-  {key:"settle",   label:"Settle in",  color:"var(--cool)",  glow:"#8f8ad0"},
-  {key:"meditate", label:"Meditation", color:"var(--warm)",  glow:"#c8a45c"},
-  {key:"return",   label:"Return",     color:"var(--ember)", glow:"#d98a5b"}
+  {key:"settle",   label:"Settle in"},
+  {key:"meditate", label:"Meditation"},
+  {key:"return",   label:"Return"}
 ];
 
 /* ---------- timer engine (timestamp based, no drift) ---------- */
@@ -726,7 +716,6 @@ function closeSheet(){ sheet.classList.remove("open"); scrim.classList.remove("o
 adjustBtn.addEventListener("click",()=>{ ensureAudio(); openSheet(); });
 scrim.addEventListener("click",closeSheet);
 $("#done").addEventListener("click",closeSheet);
-$("#resetInstall").addEventListener("click",()=>{ closeSheet(); if(window.TMInstall){ TMInstall.reset(); TMInstall.show(); } });
 
 /* ---------- "how it works" dialog ---------- */
 const infoScrim=$("#infoScrim");
@@ -864,10 +853,6 @@ renderIdle();
   scrim.addEventListener("click", e=>{ if(e.target===scrim) dismiss(); });
 
   if(!standalone) window.addEventListener("load", ()=> setTimeout(autoShow, 1400));
-
-  // small API so a testing button can re-show the prompt / clear the "don't show again" flag
-  window.TMInstall={ show(){ const v=decide()||"ios"; render(v); open(); },
-                     reset(){ try{ localStorage.removeItem("instNever"); }catch(e){} } };
 })();
 
 /* ---------- service worker (offline / installable) ---------- */
