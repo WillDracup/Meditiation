@@ -479,6 +479,9 @@ function ensureAudio(){
     master = audio.createGain(); master.gain.value=1; master.connect(audio.destination);
     startKeepAlive();
   }
+  // iOS 16.4+: play through the "playback" session so the bowls sound even when the
+  // phone's ring/Silent switch is on (like an alarm). Only affects this app's audio.
+  try{ if(navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}
   if(audio.state==="suspended") audio.resume();
   return audio;
 }
