@@ -535,6 +535,42 @@ function showRipple(){
   rippleEl.classList.remove("go"); void rippleEl.offsetWidth; rippleEl.classList.add("go");
 }
 
+/* ---------- best-effort iOS Silent-switch detector ----------
+   No web API reports the ring/silent switch, so this is a heuristic: play a short,
+   near-silent HTML5 clip and time how fast it "ends". On iOS, muted playback collapses
+   almost instantly; audible playback runs the full ~0.5s. iOS-only, advisory only (it
+   just shows a warning — it never blocks or mutes), and it can vary by iOS version. */
+const isIOSDev = /iphone|ipad|ipod/i.test(navigator.userAgent||"") ||
+  (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+let silentClipURL=null;
+function silentClip(){
+  if(silentClipURL) return silentClipURL;
+  try{
+    const rate=8000, n=Math.floor(rate*0.5), buf=new ArrayBuffer(44+n), dv=new DataView(buf); let o=0;
+    const wr=s=>{ for(let i=0;i<s.length;i++) dv.setUint8(o++,s.charCodeAt(i)); };
+    wr("RIFF"); dv.setUint32(o,36+n,true); o+=4; wr("WAVE"); wr("fmt ");
+    dv.setUint32(o,16,true); o+=4; dv.setUint16(o,1,true); o+=2; dv.setUint16(o,1,true); o+=2;
+    dv.setUint32(o,rate,true); o+=4; dv.setUint32(o,rate,true); o+=4;
+    dv.setUint16(o,1,true); o+=2; dv.setUint16(o,8,true); o+=2; wr("data"); dv.setUint32(o,n,true); o+=4;
+    for(let i=0;i<n;i++) dv.setUint8(o++,128);           // 8-bit silence
+    silentClipURL=URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+  }catch(e){}
+  return silentClipURL;
+}
+function warnIfSilent(){
+  if(!isIOSDev) return;                                  // heuristic only applies to iOS
+  const url=silentClip(); if(!url) return;
+  try{
+    const a=new Audio(url); a.volume=0.02;
+    const start=performance.now(); let done=false;
+    const finish=m=>{ if(done) return; done=true;
+      if(m) showNote("Your phone is on Silent — flip the ring switch or you won’t hear the bells.", 7000); };
+    a.addEventListener("ended", ()=>finish(performance.now()-start < 250), {once:true});
+    setTimeout(()=>finish(false), 1200);                 // ran the full clip (or unknown) → assume audible
+    const p=a.play(); if(p && p.catch) p.catch(()=>{});
+  }catch(e){}
+}
+
 /* ---------- elements ---------- */
 const $ = s=>document.querySelector(s);
 const eyebrow=$("#eyebrow"), timeEl=$("#time"), subEl=$("#sub"), progEl=$("#prog");
@@ -654,6 +690,7 @@ function begin(){
     ringBowl(cfg.sound, 1);
     showNote("Didn't hear the bell? Check volume & Silent switch.");
   }
+  warnIfSilent();   // if it reads as Silent, replaces the note with a clearer warning
   state="running"; bowlEl.classList.add("running");
   setMode("running");
   startStage(0);
